@@ -18,7 +18,7 @@ export function AdminDashboard() {
       setStats({
         totalOrders: response.data.pagination.total,
         pendingOrders: orders.filter(o => o.status === 'pending').length,
-        totalProducts: Math.floor(Math.random() * 100) + 20,
+        totalProducts: 1,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
       });
       setRecentOrders(orders.slice(0, 5));
