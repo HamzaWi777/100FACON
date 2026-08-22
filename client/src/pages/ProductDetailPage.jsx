@@ -5,6 +5,44 @@ import { productService, cartService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { addToGuestCart, getOrCreateGuestSessionId } from '../utils/guestCart';
 
+// Sliding carousel with live finger-drag and snap-to-slide transitions.
+function useSwipeCarousel(length) {
+  const [index, setIndex] = useState(0);
+  const [drag, setDrag] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef(0);
+  const swiped = useRef(false);
+
+  const go = (delta) => {
+    if (!length) return;
+    setIndex((i) => (i + delta + length) % length);
+  };
+
+  const onTouchStart = (e) => {
+    startX.current = e.touches[0].clientX;
+    setDragging(true);
+    swiped.current = false;
+    setDrag(0);
+  };
+  const onTouchMove = (e) => {
+    if (!dragging) return;
+    setDrag(e.touches[0].clientX - startX.current);
+  };
+  const onTouchEnd = () => {
+    setDragging(false);
+    if (Math.abs(drag) > 50) {
+      go(drag > 0 ? -1 : 1);
+      swiped.current = true;
+    }
+    setDrag(0);
+  };
+
+  const transform = `translateX(calc(${-index * 100}% + ${drag}px))`;
+  const trackClass = dragging ? 'transition-none' : 'transition-transform duration-300 ease-out';
+
+  return { index, setIndex, go, transform, trackClass, onTouchStart, onTouchMove, onTouchEnd, swiped };
+}
+
 export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -14,10 +52,10 @@ export function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [lbVisible, setLbVisible] = useState(false);
+  const pageCarousel = useSwipeCarousel(product?.images?.length || 0);
+  const lightboxCarousel = useSwipeCarousel(product?.images?.length || 0);
 
   useEffect(() => { fetchProduct(); }, [id]);
 
@@ -69,7 +107,7 @@ export function ProductDetailPage() {
 
   // ── Lightbox ──
   const openLightbox = (index) => {
-    setLightboxIndex(index);
+    lightboxCarousel.setIndex(index);
     setLightboxOpen(true);
     requestAnimationFrame(() => setLbVisible(true));
   };
@@ -79,45 +117,13 @@ export function ProductDetailPage() {
     setTimeout(() => setLightboxOpen(false), 300);
   };
 
-  const navigateLightbox = (delta) => {
-    if (!product?.images?.length) return;
-    const len = product.images.length;
-    setLightboxIndex((i) => (i + delta + len) % len);
-  };
-
-  // Touch swipe support
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
-  const swipedRef = useRef(false);
-  const onTouchStart = (e) => { touchStartX.current = e.changedTouches[0].clientX; swipedRef.current = false; };
-  const onTouchEnd = (e) => {
-    touchEndX.current = e.changedTouches[0].clientX;
-    const delta = touchEndX.current - touchStartX.current;
-    if (Math.abs(delta) > 50) navigateLightbox(delta > 0 ? -1 : 1);
-  };
-
-  // On-page gallery swipe (does not open the lightbox)
-  const onGalleryTouchEnd = (e) => {
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(delta) > 50) {
-      swipedRef.current = true;
-      navigateGallery(delta > 0 ? -1 : 1);
-    }
-  };
-
-  const navigateGallery = (delta) => {
-    if (!product?.images?.length) return;
-    const len = product.images.length;
-    setCurrentImageIndex((i) => (i + delta + len) % len);
-  };
-
   // Keyboard + body scroll lock while open
   useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e) => {
       if (e.key === 'Escape') closeLightbox();
-      else if (e.key === 'ArrowLeft') navigateLightbox(-1);
-      else if (e.key === 'ArrowRight') navigateLightbox(1);
+      else if (e.key === 'ArrowLeft') lightboxCarousel.go(-1);
+      else if (e.key === 'ArrowRight') lightboxCarousel.go(1);
     };
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
@@ -132,11 +138,11 @@ export function ProductDetailPage() {
     if (!lightboxOpen || !product?.images?.length) return;
     const len = product.images.length;
     const neighbors = [
-      product.images[(lightboxIndex - 1 + len) % len],
-      product.images[(lightboxIndex + 1) % len],
+      product.images[(lightboxCarousel.index - 1 + len) % len],
+      product.images[(lightboxCarousel.index + 1) % len],
     ];
     neighbors.forEach((img) => { const pre = new Image(); pre.src = imgSrc(img); });
-  }, [lightboxIndex, lightboxOpen]);
+  }, [lightboxCarousel.index, lightboxOpen]);
 
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>;
@@ -157,23 +163,34 @@ export function ProductDetailPage() {
         <div>
           {product.images.length > 0 ? (
             <>
-              {/* Main image + external navigation */}
-              <div className="relative">
-                <img
-                  src={imgSrc(product.images[currentImageIndex])}
-                  alt={product.name}
-                  onClick={() => {
-                    if (swipedRef.current) { swipedRef.current = false; return; }
-                    openLightbox(currentImageIndex);
-                  }}
-                  onTouchStart={onTouchStart}
-                  onTouchEnd={onGalleryTouchEnd}
-                  className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover rounded-2xl mb-4 shadow-lg cursor-zoom-in"
-                />
+              {/* Sliding gallery + external navigation */}
+              <div className="relative overflow-hidden rounded-2xl shadow-lg mb-4">
+                <div
+                  className={`flex ${pageCarousel.trackClass}`}
+                  style={{ transform: pageCarousel.transform }}
+                  onTouchStart={pageCarousel.onTouchStart}
+                  onTouchMove={pageCarousel.onTouchMove}
+                  onTouchEnd={pageCarousel.onTouchEnd}
+                >
+                  {product.images.map((img, idx) => (
+                    <div key={idx} className="w-full flex-shrink-0">
+                      <img
+                        src={imgSrc(img)}
+                        alt={`${product.name} - image ${idx + 1}`}
+                        onClick={() => {
+                          if (pageCarousel.swiped.current) { pageCarousel.swiped.current = false; return; }
+                          openLightbox(idx);
+                        }}
+                        className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover cursor-zoom-in select-none"
+                        draggable={false}
+                      />
+                    </div>
+                  ))}
+                </div>
                 {product.images.length > 1 && (
                   <>
                     <button
-                      onClick={() => navigateGallery(-1)}
+                      onClick={() => pageCarousel.go(-1)}
                       className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-purple-700 shadow transition"
                       aria-label="Photo précédente"
                     >
@@ -182,7 +199,7 @@ export function ProductDetailPage() {
                       </svg>
                     </button>
                     <button
-                      onClick={() => navigateGallery(1)}
+                      onClick={() => pageCarousel.go(1)}
                       className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-purple-700 shadow transition"
                       aria-label="Photo suivante"
                     >
@@ -202,9 +219,9 @@ export function ProductDetailPage() {
                       key={idx}
                       src={imgSrc(img)}
                       alt={`thumbnail-${idx}`}
-                      onClick={() => setCurrentImageIndex(idx)}
+                      onClick={() => pageCarousel.setIndex(idx)}
                       className={`w-16 h-20 md:w-20 md:h-28 object-cover rounded-lg cursor-pointer border-2 flex-shrink-0 transition ${
-                        currentImageIndex === idx ? 'border-purple-600' : 'border-gray-300 hover:border-purple-300'
+                        pageCarousel.index === idx ? 'border-purple-600' : 'border-gray-300 hover:border-purple-300'
                       }`}
                     />
                   ))}
@@ -371,14 +388,14 @@ export function ProductDetailPage() {
           {/* Counter */}
           {product.images.length > 1 && (
             <div className="absolute top-4 left-4 z-10 text-white/90 text-sm font-medium bg-white/10 px-3 py-1 rounded-full">
-              {lightboxIndex + 1} / {product.images.length}
+              {lightboxCarousel.index + 1} / {product.images.length}
             </div>
           )}
 
           {/* Previous */}
           {product.images.length > 1 && (
             <button
-              onClick={(e) => { e.stopPropagation(); navigateLightbox(-1); }}
+               onClick={(e) => { e.stopPropagation(); lightboxCarousel.go(-1); }}
               className="absolute left-2 sm:left-4 z-10 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition"
               aria-label="Image précédente"
             >
@@ -391,7 +408,7 @@ export function ProductDetailPage() {
           {/* Next */}
           {product.images.length > 1 && (
             <button
-              onClick={(e) => { e.stopPropagation(); navigateLightbox(1); }}
+               onClick={(e) => { e.stopPropagation(); lightboxCarousel.go(1); }}
               className="absolute right-2 sm:right-4 z-10 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition"
               aria-label="Image suivante"
             >
@@ -401,18 +418,32 @@ export function ProductDetailPage() {
             </button>
           )}
 
-          {/* High-res image */}
-          <img
-            src={imgSrc(product.images[lightboxIndex])}
-            alt={`${product.name} - image ${lightboxIndex + 1}`}
-            onClick={(e) => e.stopPropagation()}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
-            draggable={false}
-            loading="eager"
-            decoding="async"
-            className="max-w-[92vw] max-h-[82vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain select-none cursor-default"
-          />
+          {/* Sliding track */}
+          <div
+            className="absolute inset-0 flex items-center justify-center overflow-hidden"
+            onTouchStart={lightboxCarousel.onTouchStart}
+            onTouchMove={lightboxCarousel.onTouchMove}
+            onTouchEnd={lightboxCarousel.onTouchEnd}
+          >
+            <div
+              className={`flex w-full h-full ${lightboxCarousel.trackClass}`}
+              style={{ transform: lightboxCarousel.transform }}
+            >
+              {product.images.map((img, idx) => (
+                <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center px-2">
+                  <img
+                    src={imgSrc(img)}
+                    alt={`${product.name} - image ${idx + 1}`}
+                    onClick={(e) => e.stopPropagation()}
+                    draggable={false}
+                    loading="eager"
+                    decoding="async"
+                    className="max-w-[92vw] max-h-[82vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain select-none cursor-default"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
