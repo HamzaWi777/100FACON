@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { productService, cartService } from '../services';
@@ -15,6 +15,9 @@ export function ProductDetailPage() {
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lbVisible, setLbVisible] = useState(false);
 
   useEffect(() => { fetchProduct(); }, [id]);
 
@@ -64,6 +67,62 @@ export function ProductDetailPage() {
   const currentVariantStock = product ? getVariantStock() : 0;
   const imgSrc = (img) => img.startsWith('http') ? img : `http://localhost:5000${img}`;
 
+  // ── Lightbox ──
+  const openLightbox = (index) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+    requestAnimationFrame(() => setLbVisible(true));
+  };
+
+  const closeLightbox = () => {
+    setLbVisible(false);
+    setTimeout(() => setLightboxOpen(false), 300);
+  };
+
+  const navigateLightbox = (delta) => {
+    if (!product?.images?.length) return;
+    const len = product.images.length;
+    setLightboxIndex((i) => (i + delta + len) % len);
+  };
+
+  // Touch swipe support
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const onTouchStart = (e) => { touchStartX.current = e.changedTouches[0].clientX; };
+  const onTouchEnd = (e) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    const delta = touchEndX.current - touchStartX.current;
+    if (Math.abs(delta) > 50) navigateLightbox(delta > 0 ? -1 : 1);
+  };
+
+  // Keyboard + body scroll lock while open
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') navigateLightbox(-1);
+      else if (e.key === 'ArrowRight') navigateLightbox(1);
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [lightboxOpen]);
+
+  // Preload neighbouring images for smooth navigation
+  useEffect(() => {
+    if (!lightboxOpen || !product?.images?.length) return;
+    const len = product.images.length;
+    const neighbors = [
+      product.images[(lightboxIndex - 1 + len) % len],
+      product.images[(lightboxIndex + 1) % len],
+    ];
+    neighbors.forEach((img) => { const pre = new Image(); pre.src = imgSrc(img); });
+  }, [lightboxIndex, lightboxOpen]);
+
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div></div>;
   if (!product) return <div className="flex items-center justify-center min-h-screen text-gray-600">Produit non trouvé</div>;
 
@@ -86,7 +145,8 @@ export function ProductDetailPage() {
               <img
                 src={imgSrc(product.images[currentImageIndex])}
                 alt={product.name}
-                className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover rounded-2xl mb-4 shadow-lg"
+                onClick={() => openLightbox(currentImageIndex)}
+                className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover rounded-2xl mb-4 shadow-lg cursor-zoom-in"
               />
 
               {/* Thumbnails — horizontal scroll on mobile */}
@@ -97,7 +157,7 @@ export function ProductDetailPage() {
                       key={idx}
                       src={imgSrc(img)}
                       alt={`thumbnail-${idx}`}
-                      onClick={() => setCurrentImageIndex(idx)}
+                      onClick={() => { setCurrentImageIndex(idx); openLightbox(idx); }}
                       className={`w-16 h-20 md:w-20 md:h-28 object-cover rounded-lg cursor-pointer border-2 flex-shrink-0 transition ${
                         currentImageIndex === idx ? 'border-purple-600' : 'border-gray-300 hover:border-purple-300'
                       }`}
@@ -243,6 +303,73 @@ export function ProductDetailPage() {
           <div className="h-24 md:h-0" />
         </div>
       </div>
+
+      {lightboxOpen && (
+        <div
+          className={`fixed inset-0 z-[60] bg-black/95 flex items-center justify-center transition-opacity duration-300 ${lbVisible ? 'opacity-100' : 'opacity-0'}`}
+          onClick={closeLightbox}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Galerie d'images"
+        >
+          {/* Close button */}
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 z-10 w-11 h-11 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+            aria-label="Fermer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Counter */}
+          {product.images.length > 1 && (
+            <div className="absolute top-4 left-4 z-10 text-white/90 text-sm font-medium bg-white/10 px-3 py-1 rounded-full">
+              {lightboxIndex + 1} / {product.images.length}
+            </div>
+          )}
+
+          {/* Previous */}
+          {product.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); navigateLightbox(-1); }}
+              className="absolute left-2 sm:left-4 z-10 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+              aria-label="Image précédente"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+
+          {/* Next */}
+          {product.images.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); navigateLightbox(1); }}
+              className="absolute right-2 sm:right-4 z-10 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+              aria-label="Image suivante"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+
+          {/* High-res image */}
+          <img
+            src={imgSrc(product.images[lightboxIndex])}
+            alt={`${product.name} - image ${lightboxIndex + 1}`}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            draggable={false}
+            loading="eager"
+            decoding="async"
+            className="max-w-[92vw] max-h-[82vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain select-none cursor-default"
+          />
+        </div>
+      )}
     </div>
   );
 }
