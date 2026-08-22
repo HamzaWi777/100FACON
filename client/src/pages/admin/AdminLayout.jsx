@@ -7,9 +7,9 @@ import { AdminCustomers } from './AdminCustomers';
 
 const menuItems = [
   { id: 'dashboard', label: '📊 Dashboard', path: '/admin/dashboard' },
-  { id: 'products', label: '👕 Products',  path: '/admin/products' },
-  { id: 'orders',   label: '📦 Orders',    path: '/admin/orders' },
-  { id: 'customers',label: '👥 Customers', path: '/admin/customers' },
+  { id: 'products', label: '👕 Produits',  path: '/admin/products' },
+  { id: 'orders',   label: '📦 Commandes',    path: '/admin/orders' },
+  { id: 'customers',label: '👥 Clients', path: '/admin/customers' },
 ];
 
 export function AdminLayout() {
