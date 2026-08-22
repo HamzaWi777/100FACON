@@ -88,11 +88,27 @@ export function ProductDetailPage() {
   // Touch swipe support
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
-  const onTouchStart = (e) => { touchStartX.current = e.changedTouches[0].clientX; };
+  const swipedRef = useRef(false);
+  const onTouchStart = (e) => { touchStartX.current = e.changedTouches[0].clientX; swipedRef.current = false; };
   const onTouchEnd = (e) => {
     touchEndX.current = e.changedTouches[0].clientX;
     const delta = touchEndX.current - touchStartX.current;
     if (Math.abs(delta) > 50) navigateLightbox(delta > 0 ? -1 : 1);
+  };
+
+  // On-page gallery swipe (does not open the lightbox)
+  const onGalleryTouchEnd = (e) => {
+    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(delta) > 50) {
+      swipedRef.current = true;
+      navigateGallery(delta > 0 ? -1 : 1);
+    }
+  };
+
+  const navigateGallery = (delta) => {
+    if (!product?.images?.length) return;
+    const len = product.images.length;
+    setCurrentImageIndex((i) => (i + delta + len) % len);
   };
 
   // Keyboard + body scroll lock while open
@@ -141,13 +157,42 @@ export function ProductDetailPage() {
         <div>
           {product.images.length > 0 ? (
             <>
-              {/* Main image */}
-              <img
-                src={imgSrc(product.images[currentImageIndex])}
-                alt={product.name}
-                onClick={() => openLightbox(currentImageIndex)}
-                className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover rounded-2xl mb-4 shadow-lg cursor-zoom-in"
-              />
+              {/* Main image + external navigation */}
+              <div className="relative">
+                <img
+                  src={imgSrc(product.images[currentImageIndex])}
+                  alt={product.name}
+                  onClick={() => {
+                    if (swipedRef.current) { swipedRef.current = false; return; }
+                    openLightbox(currentImageIndex);
+                  }}
+                  onTouchStart={onTouchStart}
+                  onTouchEnd={onGalleryTouchEnd}
+                  className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover rounded-2xl mb-4 shadow-lg cursor-zoom-in"
+                />
+                {product.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => navigateGallery(-1)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-purple-700 shadow transition"
+                      aria-label="Photo précédente"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => navigateGallery(1)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 hover:bg-white text-purple-700 shadow transition"
+                      aria-label="Photo suivante"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
 
               {/* Thumbnails — horizontal scroll on mobile */}
               {product.images.length > 1 && (
@@ -157,7 +202,7 @@ export function ProductDetailPage() {
                       key={idx}
                       src={imgSrc(img)}
                       alt={`thumbnail-${idx}`}
-                      onClick={() => { setCurrentImageIndex(idx); openLightbox(idx); }}
+                      onClick={() => setCurrentImageIndex(idx)}
                       className={`w-16 h-20 md:w-20 md:h-28 object-cover rounded-lg cursor-pointer border-2 flex-shrink-0 transition ${
                         currentImageIndex === idx ? 'border-purple-600' : 'border-gray-300 hover:border-purple-300'
                       }`}
