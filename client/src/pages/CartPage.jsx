@@ -105,24 +105,24 @@ export function CartPage() {
                   key={item.id}
                   className="bg-white p-5 rounded-2xl shadow-md border border-purple-100 hover:shadow-lg transition flex gap-4"
                 >
-                  {item.images[0] && (
-                    <img
-                      src={item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`}
-                      alt={item.name}
-                      className="w-24 h-24 object-cover rounded-xl"
-                    />
-                  )}
+                   {item.images[0] && (
+                      <img
+                        src={item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`}
+                        alt={item.name}
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl flex-shrink-0"
+                      />
+                    )}
 
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-gray-900">{item.name}</h3>
-                    <p className="text-sm text-gray-600">
-                      Taille : {item.size} | Couleur : {item.color}
-                    </p>
-                    <p className="text-lg font-bold text-purple-600 mt-2">
-                      TND {(typeof item.price === 'string' ? parseFloat(item.price) : item.price).toFixed(2)}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base sm:text-lg text-gray-900 break-words">{item.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        Taille : {item.size} | Couleur : {item.color}
+                      </p>
+                      <p className="text-base sm:text-lg font-bold text-purple-600 mt-2">
+                        TND {(typeof item.price === 'string' ? parseFloat(item.price) : item.price).toFixed(2)}
+                      </p>
 
-                    <div className="flex items-center gap-4 mt-4">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4">
                       <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                         <button
                           onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}

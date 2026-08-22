@@ -196,13 +196,13 @@ export function HomePage() {
           <p className="text-center text-purple-100 mb-8 text-sm md:text-base">
             Abonnez-vous à notre newsletter pour recevoir les dernières tendances et offres exclusives
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <input
               type="email"
               placeholder="Votre email..."
-              className="flex-1 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="flex-1 min-w-0 px-4 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300"
             />
-            <button className="bg-white text-purple-600 px-6 py-3 rounded-full font-bold hover:bg-purple-50 transition whitespace-nowrap">
+            <button className="bg-white text-purple-600 px-6 py-3 rounded-full font-bold hover:bg-purple-50 transition whitespace-nowrap w-full sm:w-auto">
               S'abonner
             </button>
           </div>
