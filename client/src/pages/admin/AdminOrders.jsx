@@ -61,7 +61,8 @@ export function AdminOrders() {
           { label: 'Téléphone', value: order.phone },
           { label: 'Gouvernorat', value: order.wilaya },
           { label: 'Adresse de livraison', value: order.shipping_address },
-          { label: 'Note', value: order.note },
+          { label: 'Note', value: order.notes },
+          console.log(order.notes)
         ].map(f => f.value && (
           <div key={f.label}>
             <p className="text-gray-500 text-xs font-semibold uppercase">{f.label}</p>
