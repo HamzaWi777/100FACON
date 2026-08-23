@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { orderService } from '../../services';
+import { orderService, productService } from '../../services';
 
 export function AdminDashboard() {
   const [stats, setStats] = useState({ totalOrders: 0, pendingOrders: 0, totalProducts: 0, totalRevenue: 0 });
@@ -12,13 +12,21 @@ export function AdminDashboard() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await orderService.getAllOrders({ limit: 100 });
-      const orders = response.data.orders;
-      const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
+      const [ordersRes, productsRes] = await Promise.all([
+        orderService.getAllOrders({ limit: 1000 }),
+        productService.getAll({ limit: 1 }),
+      ]);
+      const orders = ordersRes.data.orders;
+      // Revenue counts only delivered orders ("livrée"). Data is stored in the
+      // `status` enum as 'delivered'; we also honour a `state` field if present.
+      const isDelivered = (o) => o.status === 'delivered' || o.state === 'livrée';
+      const totalRevenue = orders
+        .filter(isDelivered)
+        .reduce((sum, o) => sum + (parseFloat(o.total_price) || 0), 0);
       setStats({
-        totalOrders: response.data.pagination.total,
+        totalOrders: ordersRes.data.pagination.total,
         pendingOrders: orders.filter(o => o.status === 'pending').length,
-        totalProducts: 1,
+        totalProducts: productsRes.data.pagination.total,
         totalRevenue: parseFloat(totalRevenue.toFixed(2)),
       });
       setRecentOrders(orders.slice(0, 5));
