@@ -32,6 +32,7 @@ export function HomePage() {
     { name: 'Hommes', icon: '👔', link: '/products?category=men' },
     { name: 'Accessoires', icon: '💍', link: '/products?category=accessories' },
     { name: 'Chaussures', icon: '👠', link: '/products?category=shoes' },
+    { name: 'Enfants', icon: '🧸', link: '/products?category=enfants' },
   ];
 
   return (

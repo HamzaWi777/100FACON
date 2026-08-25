@@ -16,6 +16,7 @@ export function Footer() {
               <li><a href="/products?category=women" className="hover:text-purple-300 transition">Femmes</a></li>
               <li><a href="/products?category=men" className="hover:text-purple-300 transition">Hommes</a></li>
               <li><a href="/products?category=accessories" className="hover:text-purple-300 transition">Accessoires</a></li>
+              <li><a href="/products?category=enfants" className="hover:text-purple-300 transition">Enfants</a></li>
             </ul>
           </div>
           <div>

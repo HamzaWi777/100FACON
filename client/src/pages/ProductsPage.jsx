@@ -18,10 +18,10 @@ export function ProductsPage() {
     sort: searchParams.get('sort') || 'newest',
   });
 
-  const categories = ['all', 'men', 'women', 'accessories', 'shoes'];
+  const categories = ['all', 'men', 'women', 'accessories', 'shoes', 'enfants'];
   const categoryLabels = {
     all: 'Tous', men: 'Hommes', women: 'Femmes',
-    accessories: 'Accessoires', shoes: 'Chaussures',
+    accessories: 'Accessoires', shoes: 'Chaussures', enfants: 'Enfants',
   };
 
   useEffect(() => { fetchProducts(); }, [filters, searchParams]);

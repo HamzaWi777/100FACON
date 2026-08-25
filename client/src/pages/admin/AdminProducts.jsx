@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { productService } from '../../services';
 
-const DEFAULT_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50'];
+const DEFAULT_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52'];
 
 export function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -151,8 +151,8 @@ export function AdminProducts() {
                 <label className="block text-sm font-medium text-gray-900 mb-2">Catégorie</label>
                 <select name="category" value={formData.category} onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                  {['men', 'women', 'accessories', 'shoes'].map(c => (
-                    <option key={c} value={c}>{c === 'men' ? 'Hommes' : c === 'women' ? 'Femmes' : c === 'accessories' ? 'Accessoires' : 'Chaussures'}</option>
+                  {['men', 'women', 'accessories', 'shoes', 'enfants'].map(c => (
+                    <option key={c} value={c}>{c === 'men' ? 'Hommes' : c === 'women' ? 'Femmes' : c === 'accessories' ? 'Accessoires' : c === 'shoes' ? 'Chaussures' : 'Enfants'}</option>
                   ))}
                 </select>
               </div>
