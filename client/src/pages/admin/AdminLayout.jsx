@@ -4,12 +4,14 @@ import { AdminDashboard } from './AdminDashboard';
 import { AdminProducts } from './AdminProducts';
 import { AdminOrders } from './AdminOrders';
 import { AdminCustomers } from './AdminCustomers';
+import { AdminAccount } from './AdminAccount';
 
 const menuItems = [
   { id: 'dashboard', label: '📊 Dashboard', path: '/admin/dashboard' },
   { id: 'products', label: '👕 Produits',  path: '/admin/products' },
   { id: 'orders',   label: '📦 Commandes',    path: '/admin/orders' },
   { id: 'customers',label: '👥 Clients', path: '/admin/customers' },
+  { id: 'account',  label: '🔒 Compte',  path: '/admin/account' },
 ];
 
 export function AdminLayout() {
@@ -100,6 +102,7 @@ export function AdminLayout() {
             <Route path="/products"   element={<AdminProducts />} />
             <Route path="/orders"     element={<AdminOrders />} />
             <Route path="/customers"  element={<AdminCustomers />} />
+            <Route path="/account"    element={<AdminAccount />} />
           </Routes>
         </main>
 
