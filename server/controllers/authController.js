@@ -78,7 +78,6 @@ export async function login(req, res) {
         address: user.address,
         wilaya: user.wilaya,
         role: user.role,
-        must_change_password: !!user.must_change_password,
       },
     });
   } catch (error) {
@@ -91,7 +90,7 @@ export async function getCurrentUser(req, res) {
     const userId = req.user.id;
 
     const [users] = await pool.query(
-      'SELECT id, full_name, email, phone, address, wilaya, role, must_change_password FROM users WHERE id = ?',
+      'SELECT id, full_name, email, phone, address, wilaya, role FROM users WHERE id = ?',
       [userId]
     );
 
@@ -130,7 +129,7 @@ export async function changePassword(req, res) {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query('UPDATE users SET password = ?, must_change_password = FALSE WHERE id = ?', [hashedPassword, userId]);
+    await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
