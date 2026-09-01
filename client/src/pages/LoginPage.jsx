@@ -6,18 +6,12 @@ import { authService } from '../services';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, mustChangePassword: existingMustChange } = useAuth();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-
-  useEffect(() => {
-    if (existingMustChange) {
-      navigate('/force-change-password');
-    }
-  }, [existingMustChange, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -33,12 +27,8 @@ export function LoginPage() {
     try {
       const response = await authService.login(formData);
       login(response.data.token, response.data.user);
-      if (response.data.user.must_change_password) {
-        navigate('/force-change-password');
-      } else {
-        toast.success('Login successful');
-        navigate(response.data.user.role === 'admin' ? '/admin/dashboard' : '/');
-      }
+      toast.success('Login successful');
+      navigate(response.data.user.role === 'admin' ? '/admin/dashboard' : '/');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Login failed');
     } finally {
