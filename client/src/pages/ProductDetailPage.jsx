@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { productService, cartService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { addToGuestCart, getOrCreateGuestSessionId } from '../utils/guestCart';
+import { trackViewContent, trackAddToCart } from '../utils/metaPixel';
 
 // Sliding carousel with live finger-drag and snap-to-slide transitions.
 function useSwipeCarousel(length) {
@@ -63,9 +64,11 @@ export function ProductDetailPage() {
     setLoading(true);
     try {
       const response = await productService.getById(id);
-      setProduct(response.data);
-      if (response.data.sizes?.length > 0) setSelectedSize(response.data.sizes[0]);
-      if (response.data.colors?.length > 0) setSelectedColor(response.data.colors[0]);
+      const data = response.data;
+      setProduct(data);
+      if (data.sizes?.length > 0) setSelectedSize(data.sizes[0]);
+      if (data.colors?.length > 0) setSelectedColor(data.colors[0]);
+      trackViewContent({ id: data.id, name: data.name, price: data.price });
     } catch {
       toast.error('Failed to load product');
     } finally {
@@ -90,6 +93,7 @@ export function ProductDetailPage() {
         getOrCreateGuestSessionId();
         addToGuestCart(product, quantity, selectedSize, selectedColor);
       }
+      trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity });
       toast.success('Added to cart');
       navigate('/cart');
     } catch (error) {

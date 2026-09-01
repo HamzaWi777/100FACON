@@ -1,10 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { PrivateRoute, AdminRoute } from './components/ProtectedRoute';
 import { WhatsAppButton } from './components/WhatsAppButton';
+import { trackPageView } from './utils/metaPixel';
 
 // Pages
 import { HomePage } from './pages/HomePage';
@@ -17,10 +19,19 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
 
+function PageTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView(location.pathname + location.search);
+  }, [location.pathname, location.search]);
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <PageTracker />
         <div className="min-h-screen flex flex-col bg-gray-50">
           <Header />
           <main className="flex-1 container mx-auto px-4 py-8">

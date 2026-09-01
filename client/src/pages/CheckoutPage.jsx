@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { cartService, orderService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { governorates } from '../constants/governorates';
+import { trackInitiateCheckout, trackPurchase } from '../utils/metaPixel';
 
 function CheckoutPageContent() {
   const navigate = useNavigate();
@@ -27,6 +28,21 @@ function CheckoutPageContent() {
   useEffect(() => {
     fetchCart();
   }, []);
+
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      const totalPrice = cartItems.reduce((sum, item) => {
+        const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
+        return sum + price * item.quantity;
+      }, 0);
+      trackInitiateCheckout({
+        value: totalPrice + 8.00,
+        currency: 'TND',
+        contentIds: cartItems.map((item) => item.product_id),
+        numItems: cartItems.length,
+      });
+    }
+  }, [cartItems]);
 
   const fetchCart = async () => {
     setLoading(true);
@@ -69,6 +85,17 @@ function CheckoutPageContent() {
       };
 
       const response = await orderService.createOrder(orderData);
+      const orderId = response.data.orderId;
+      const totalPrice = response.data.totalPrice;
+
+      trackPurchase({
+        orderId,
+        value: totalPrice + 8.00,
+        currency: 'TND',
+        contentIds: cartItems.map((item) => item.product_id),
+        numItems: cartItems.length,
+      });
+
       toast.success('Order placed successfully!');
       
       // Clear guest cart
