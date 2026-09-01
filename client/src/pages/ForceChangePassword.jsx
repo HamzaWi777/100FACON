@@ -4,20 +4,15 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services';
 
-export function LoginPage() {
+export function ForceChangePassword() {
   const navigate = useNavigate();
-  const { login, mustChangePassword: existingMustChange } = useAuth();
+  const { clearMustChangePassword } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   });
-
-  useEffect(() => {
-    if (existingMustChange) {
-      navigate('/force-change-password');
-    }
-  }, [existingMustChange, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -30,17 +25,22 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast.error('New passwords do not match');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await authService.login(formData);
-      login(response.data.token, response.data.user);
-      if (response.data.user.must_change_password) {
-        navigate('/force-change-password');
-      } else {
-        toast.success('Login successful');
-        navigate(response.data.user.role === 'admin' ? '/admin/dashboard' : '/');
-      }
+      await authService.changePassword({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+      });
+      clearMustChangePassword();
+      toast.success('Password updated successfully');
+      navigate('/admin/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Login failed');
+      toast.error(error.response?.data?.error || 'Failed to update password');
     } finally {
       setLoading(false);
     }
@@ -50,19 +50,19 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-purple-100">
         <div className="text-center mb-8">
-          <h2 className="font-serif text-3xl font-bold text-gray-900 mb-2">Connexion</h2>
-          <p className="text-gray-600 text-sm">Bienvenue sur 100 FAÇONS</p>
+          <h2 className="font-serif text-3xl font-bold text-gray-900 mb-2">Changez votre mot de passe</h2>
+          <p className="text-gray-600 text-sm">Vous devez changer votre mot de passe avant de continuer</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Email
+              Mot de passe actuel
             </label>
             <input
-              type="email"
-              name="email"
-              value={formData.email}
+              type="password"
+              name="currentPassword"
+              value={formData.currentPassword}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               required
@@ -71,15 +71,31 @@ export function LoginPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Mot de passe
+              Nouveau mot de passe
             </label>
             <input
               type="password"
-              name="password"
-              value={formData.password}
+              name="newPassword"
+              value={formData.newPassword}
               onChange={handleChange}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               required
+              minLength={6}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+              Confirmer le nouveau mot de passe
+            </label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              required
+              minLength={6}
             />
           </div>
 
@@ -88,19 +104,9 @@ export function LoginPage() {
             disabled={loading}
             className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-semibold"
           >
-            {loading ? 'Connexion en cours...' : 'Se connecter'}
+            {loading ? 'Mise à jour...' : 'Mettre à jour le mot de passe'}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-gray-600">
-          Pas encore de compte ?{' '}
-          <button
-            onClick={() => navigate('/register')}
-            className="text-purple-600 font-semibold hover:text-purple-700"
-          >
-            S'inscrire
-          </button>
-        </p>
       </div>
     </div>
   );

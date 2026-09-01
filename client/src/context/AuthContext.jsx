@@ -30,13 +30,25 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const clearMustChangePassword = () => {
+    setUser((prev) => (prev ? { ...prev, must_change_password: false } : prev));
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      parsed.must_change_password = false;
+      localStorage.setItem('user', JSON.stringify(parsed));
+    }
+  };
+
   const value = {
     user,
     loading,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
+    mustChangePassword: !!user?.must_change_password,
     login,
     logout,
+    clearMustChangePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

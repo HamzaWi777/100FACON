@@ -12,7 +12,7 @@ export function PrivateRoute({ children }) {
 }
 
 export function AdminRoute({ children }) {
-  const { isAdmin, isAuthenticated, loading } = useAuth();
+  const { isAdmin, isAuthenticated, loading, mustChangePassword } = useAuth();
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -20,6 +20,10 @@ export function AdminRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
+  }
+
+  if (mustChangePassword) {
+    return <Navigate to="/force-change-password" />;
   }
 
   return isAdmin ? children : <Navigate to="/" />;
