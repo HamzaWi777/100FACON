@@ -1,4 +1,5 @@
 import pool from '../config/database.js';
+import { sendCapiPurchaseEvent } from '../utils/metaCapi.js';
 
 export async function createOrder(req, res) {
   try {
@@ -70,6 +71,22 @@ for (const item of cartItems) {
       orderId,
       totalPrice,
     });
+
+    const pixelId = process.env.META_PIXEL_ID;
+    const accessToken = process.env.META_CAPI_ACCESS_TOKEN;
+    if (pixelId && accessToken) {
+      sendCapiPurchaseEvent({
+        orderId,
+        totalPrice,
+        currency: 'TND',
+        items: cartItems,
+        userIp: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('user-agent'),
+        eventSourceUrl: process.env.SITE_URL || req.get('referer') || '',
+        pixelId,
+        accessToken,
+      }).catch(() => {});
+    }
   } catch (error) {
     console.error('Error creating order:', error);
     res.status(500).json({ error: error.message });
