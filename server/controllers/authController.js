@@ -78,6 +78,7 @@ export async function login(req, res) {
         address: user.address,
         wilaya: user.wilaya,
         role: user.role,
+        must_change_password: !!user.must_change_password,
       },
     });
   } catch (error) {
@@ -90,7 +91,7 @@ export async function getCurrentUser(req, res) {
     const userId = req.user.id;
 
     const [users] = await pool.query(
-      'SELECT id, full_name, email, phone, address, wilaya, role FROM users WHERE id = ?',
+      'SELECT id, full_name, email, phone, address, wilaya, role, must_change_password FROM users WHERE id = ?',
       [userId]
     );
 
@@ -99,6 +100,39 @@ export async function getCurrentUser(req, res) {
     }
 
     res.json(users[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export async function changePassword(req, res) {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+    const isCurrentValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentValid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password = ?, must_change_password = FALSE WHERE id = ?', [hashedPassword, userId]);
+
+    res.json({ message: 'Password updated successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

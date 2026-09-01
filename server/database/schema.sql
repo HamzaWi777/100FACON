@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   address TEXT,
   governorate VARCHAR(100),
   role ENUM('client', 'admin') DEFAULT 'client',
+  must_change_password BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_email (email),
   INDEX idx_role (role)

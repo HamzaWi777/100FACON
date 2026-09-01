@@ -27,8 +27,12 @@ export async function initializeDatabase() {
     // Seed admin user
     const hashedPassword = await bcrypt.hash('admin123', 10);
     await connection.execute(
-      'INSERT IGNORE INTO users (full_name, email, password, phone, address, wilaya, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ['Admin User', 'admin@store.com', hashedPassword, '0123456789', 'Admin Address', 'Algiers', 'admin']
+      'INSERT IGNORE INTO users (full_name, email, password, phone, address, wilaya, role, must_change_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ['Admin User', 'admin@store.com', hashedPassword, '0123456789', 'Admin Address', 'Algiers', 'admin', true]
+    );
+    await connection.execute(
+      'UPDATE users SET must_change_password = TRUE WHERE email = ? AND must_change_password IS NULL',
+      ['admin@store.com']
     );
 
     connection.release();
