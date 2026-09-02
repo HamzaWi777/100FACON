@@ -80,8 +80,8 @@ function MatchyMatchyForm({
   adultQty, setAdultQty,
   enfantSize, setEnfantSize,
   enfantColor, setEnfantColor,
-  enfantQty, setEnfantQty,
-  selectionMode,
+   enfantQty, setEnfantQty,
+  selectionMode, setSelectionMode,
 }) {
   const variants = product.variants || {};
   const colorDisplay = (color) => {
@@ -611,6 +611,7 @@ export function ProductDetailPage() {
               enfantColor={enfantColor} setEnfantColor={setEnfantColor}
               enfantQty={enfantQty} setEnfantQty={setEnfantQty}
               selectionMode={selectionMode}
+              setSelectionMode={setSelectionMode}
             />
           ) : (
           <div className="space-y-6 mb-8">
