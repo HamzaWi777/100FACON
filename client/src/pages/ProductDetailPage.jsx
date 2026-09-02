@@ -686,7 +686,7 @@ export function ProductDetailPage() {
                 <button
                   onClick={() => handleAddToCart('both')}
                   disabled={!((adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0) || (enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0))}
-                  className="bg-gradient-to-r from-pink-600 to-purple-700 text-white py-4 rounded-full hover:brightness-110 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                  className="bg-gradient-to-r to-purple-700 from-pink-600 text-white py-4 rounded-full hover:brightness-110 transition disabled:opacity-50 font-bold text-sm shadow-lg"
                 >
                   Les deux
                 </button>
