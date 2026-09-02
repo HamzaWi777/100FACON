@@ -672,14 +672,14 @@ export function ProductDetailPage() {
                 <button
                   onClick={() => handleAddToCart('adult')}
                   disabled={!(adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0)}
-                  className="bg-pink-600 text-white py-4 rounded-full hover:bg-pink-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                  className="bg-purple-600 text-white py-4 rounded-full hover:bg-pink-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
                 >
                   Acheter l'adulte
                 </button>
                 <button
                   onClick={() => handleAddToCart('enfant')}
                   disabled={!(enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0)}
-                  className="bg-purple-600 text-white py-4 rounded-full hover:bg-purple-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                  className="bg-pink-600 text-white py-4 rounded-full hover:bg-purple-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
                 >
                   Acheter l'enfant
                 </button>
