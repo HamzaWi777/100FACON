@@ -7,41 +7,69 @@ import { addToGuestCart, getOrCreateGuestSessionId } from '../utils/guestCart';
 import { trackViewContent, trackAddToCart } from '../utils/metaPixel';
 
 // Sliding carousel with live finger-drag and snap-to-slide transitions.
+// Uses imperative DOM transforms during drag to avoid React re-renders
+// on every touchmove, preventing jank when scrolling through many images.
 function useSwipeCarousel(length) {
   const [index, setIndex] = useState(0);
-  const [drag, setDrag] = useState(0);
-  const [dragging, setDragging] = useState(false);
+  const containerRef = useRef(null);
   const startX = useRef(0);
+  const currentIndex = useRef(0);
+  const lastDelta = useRef(0);
   const swiped = useRef(false);
+
+  const applyTransform = (slideIndex, withTransition = false) => {
+    const el = containerRef.current;
+    if (!el || !length) return;
+    el.style.transition = withTransition ? 'transform 0.3s ease-out' : 'none';
+    el.style.transform = `translate3d(${-slideIndex * 100}%, 0, 0)`;
+  };
 
   const go = (delta) => {
     if (!length) return;
-    setIndex((i) => (i + delta + length) % length);
+    const newIndex = (currentIndex.current + delta + length) % length;
+    applyTransform(newIndex, true);
+    currentIndex.current = newIndex;
+    setIndex(newIndex);
   };
 
   const onTouchStart = (e) => {
     startX.current = e.touches[0].clientX;
-    setDragging(true);
+    lastDelta.current = 0;
     swiped.current = false;
-    setDrag(0);
+    if (containerRef.current) containerRef.current.style.transition = 'none';
   };
+
   const onTouchMove = (e) => {
-    if (!dragging) return;
-    setDrag(e.touches[0].clientX - startX.current);
+    const el = containerRef.current;
+    if (!el || !length) return;
+    const delta = e.touches[0].clientX - startX.current;
+    lastDelta.current = delta;
+    const pct = delta / el.offsetWidth;
+    el.style.transform = `translate3d(${(currentIndex.current + -pct) * -100}%, 0, 0)`;
   };
+
   const onTouchEnd = () => {
-    setDragging(false);
-    if (Math.abs(drag) > 50) {
-      go(drag > 0 ? -1 : 1);
+    if (!length) return;
+    if (Math.abs(lastDelta.current) > 50) {
+      const newIndex = (currentIndex.current + (lastDelta.current > 0 ? -1 : 1) + length) % length;
+      applyTransform(newIndex, true);
+      currentIndex.current = newIndex;
+      setIndex(newIndex);
       swiped.current = true;
+    } else {
+      applyTransform(currentIndex.current, true);
     }
-    setDrag(0);
   };
 
-  const transform = `translateX(calc(${-index * 100}% + ${drag}px))`;
-  const trackClass = dragging ? 'transition-none' : 'transition-transform duration-300 ease-out';
+  const syncedSetIndex = (newIndex) => {
+    if (!length) return;
+    const clamped = ((newIndex % length) + length) % length;
+    applyTransform(clamped, true);
+    currentIndex.current = clamped;
+    setIndex(clamped);
+  };
 
-  return { index, setIndex, go, transform, trackClass, onTouchStart, onTouchMove, onTouchEnd, swiped };
+  return { index, setIndex: syncedSetIndex, go, containerRef, onTouchStart, onTouchMove, onTouchEnd, swiped };
 }
 
 export function ProductDetailPage() {
@@ -169,13 +197,13 @@ export function ProductDetailPage() {
             <>
               {/* Sliding gallery + external navigation */}
               <div className="relative overflow-hidden rounded-2xl shadow-lg mb-4">
-                <div
-                  className={`flex ${pageCarousel.trackClass}`}
-                  style={{ transform: pageCarousel.transform }}
-                  onTouchStart={pageCarousel.onTouchStart}
-                  onTouchMove={pageCarousel.onTouchMove}
-                  onTouchEnd={pageCarousel.onTouchEnd}
-                >
+                 <div
+                   ref={pageCarousel.containerRef}
+                   className="flex will-change-transform"
+                   onTouchStart={pageCarousel.onTouchStart}
+                   onTouchMove={pageCarousel.onTouchMove}
+                   onTouchEnd={pageCarousel.onTouchEnd}
+                 >
                    {product.images.map((img, idx) => (
                      <div key={idx} className="w-full flex-shrink-0">
                        <img
@@ -434,8 +462,8 @@ export function ProductDetailPage() {
             onTouchEnd={lightboxCarousel.onTouchEnd}
           >
             <div
-              className={`flex w-full h-full ${lightboxCarousel.trackClass}`}
-              style={{ transform: lightboxCarousel.transform }}
+              ref={lightboxCarousel.containerRef}
+              className="flex w-full h-full will-change-transform"
             >
               {product.images.map((img, idx) => (
                 <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center px-2">

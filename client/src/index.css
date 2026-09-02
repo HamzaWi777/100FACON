@@ -31,3 +31,8 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* GPU acceleration hints for carousel tracks — avoids re-render lag during drag */
+.will-change-transform {
+  will-change: transform;
+}
