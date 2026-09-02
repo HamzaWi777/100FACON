@@ -3,6 +3,10 @@ import toast from 'react-hot-toast';
 import { productService } from '../../services';
 
 const DEFAULT_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52'];
+const ENFANTS_SIZES = ['6', '8', '10', '12', '14'];
+
+const sizesForCategory = (category) =>
+  category === 'enfants' ? ENFANTS_SIZES : DEFAULT_SIZES;
 
 export function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -71,7 +75,7 @@ export function AdminProducts() {
     fd.append('price', formData.price);
     fd.append('category', formData.category);
     fd.append('colors', JSON.stringify(colors));
-    fd.append('sizes', JSON.stringify(DEFAULT_SIZES));
+    fd.append('sizes', JSON.stringify(sizesForCategory(formData.category)));
     fd.append('variantStock', JSON.stringify(variantStock));
     images.forEach((image) => fd.append('images', image.file));
     try {
@@ -120,6 +124,7 @@ export function AdminProducts() {
 
   const colors = formData.colors.split(',').map(c => c.trim()).filter(c => c);
   const displayColors = colors.length > 0 ? colors : ['No Color'];
+  const activeSizes = sizesForCategory(formData.category);
 
   return (
     <div>
@@ -193,7 +198,7 @@ export function AdminProducts() {
                     </tr>
                   </thead>
                   <tbody>
-                    {DEFAULT_SIZES.map(size => (
+                    {activeSizes.map(size => (
                       <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
                         <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size}</td>
                         {displayColors.map(color => (
