@@ -36,3 +36,14 @@ body {
 .will-change-transform {
   will-change: transform;
 }
+
+/* Skip rendering off-screen product cards for faster scroll performance */
+.product-grid-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 280px;
+}
+
+/* Ensure smooth image rendering */
+img {
+  -webkit-optimize-contrast: saturation;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { productService } from '../services';
+import { imgSrc } from '../utils/imgSrc';
 
 export function ProductsPage() {
   const navigate = useNavigate();
@@ -185,16 +186,18 @@ export function ProductsPage() {
             <>
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6 mb-8">
                 {products.map(product => (
-                  <div
-                    key={product.id}
-                    onClick={() => navigate(`/product/${product.id}`)}
-                    className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition cursor-pointer hover:-translate-y-1"
+                   <div
+                     key={product.id}
+                     onClick={() => navigate(`/product/${product.id}`)}
+                     className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition cursor-pointer hover:-translate-y-1 product-grid-item"
                   >
                     <div className="relative overflow-hidden bg-gray-100 h-44 sm:h-64 md:h-96">
                       {product.images[0] && (
                         <img
-                          src={product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`}
+                          src={imgSrc(product.images[0])}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                       )}

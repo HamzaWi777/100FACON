@@ -8,6 +8,7 @@ import {
   updateGuestCartItem, 
   removeFromGuestCart 
 } from '../utils/guestCart';
+import { imgSrc } from '../utils/imgSrc';
 
 export function CartPage() {
   const navigate = useNavigate();
@@ -105,10 +106,12 @@ export function CartPage() {
                   key={item.id}
                   className="bg-white p-5 rounded-2xl shadow-md border border-purple-100 hover:shadow-lg transition flex gap-4"
                 >
-                   {item.images[0] && (
+                    {item.images[0] && (
                       <img
-                        src={item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`}
+                        src={imgSrc(item.images[0])}
                         alt={item.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl flex-shrink-0"
                       />
                     )}

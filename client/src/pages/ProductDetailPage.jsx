@@ -5,6 +5,7 @@ import { productService, cartService } from '../services';
 import { useAuth } from '../context/AuthContext';
 import { addToGuestCart, getOrCreateGuestSessionId } from '../utils/guestCart';
 import { trackViewContent, trackAddToCart } from '../utils/metaPixel';
+import { imgSrc, preloadImages } from '../utils/imgSrc';
 
 // Sliding carousel with live finger-drag and snap-to-slide transitions.
 // Uses imperative DOM transforms during drag to avoid React re-renders
@@ -104,7 +105,11 @@ export function ProductDetailPage() {
     }
   };
 
-  const handleAddToCart = async () => {
+   useEffect(() => {
+     if (product?.images?.length) preloadImages(product.images);
+   }, [product]);
+
+   const handleAddToCart = async () => {
     if (!selectedSize || !selectedColor) {
       toast.error('Please select size and color');
       return;
@@ -135,7 +140,7 @@ export function ProductDetailPage() {
   };
 
   const currentVariantStock = product ? getVariantStock() : 0;
-  const imgSrc = (img) => img.startsWith('http') ? img : `http://localhost:5000${img}`;
+
 
   // ── Lightbox ──
   const openLightbox = (index) => {
@@ -173,7 +178,7 @@ export function ProductDetailPage() {
       product.images[(lightboxCarousel.index - 1 + len) % len],
       product.images[(lightboxCarousel.index + 1) % len],
     ];
-    neighbors.forEach((img) => { const pre = new Image(); pre.src = imgSrc(img); });
+    preloadImages(neighbors);
   }, [lightboxCarousel.index, lightboxOpen]);
 
 

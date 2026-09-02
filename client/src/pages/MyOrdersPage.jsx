@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { orderService } from '../services';
 import { PrivateRoute } from '../components/ProtectedRoute';
+import { imgSrc } from '../utils/imgSrc';
 
 function MyOrdersPageContent() {
   const navigate = useNavigate();
@@ -154,8 +155,10 @@ function MyOrdersPageContent() {
                       >
                         {item.images[0] && (
                           <img
-                            src={`http://localhost:5000${item.images[0]}`}
+                            src={imgSrc(item.images[0])}
                             alt={item.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-20 h-20 object-cover rounded-lg"
                           />
                         )}

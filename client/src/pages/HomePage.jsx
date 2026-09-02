@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { productService } from '../services';
 import coverImg from '../assets/hero-cover.jpg';
 import coverImgMobile from '../assets/hero-cover-mobile.jpg';
+import { imgSrc } from '../utils/imgSrc';
 
 // ...
 
@@ -109,16 +110,18 @@ export function HomePage() {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
               {featuredProducts.map(product => (
-                <button
-                  key={product.id}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                  className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 text-left"
+                 <button
+                   key={product.id}
+                   onClick={() => navigate(`/product/${product.id}`)}
+                   className="group bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 text-left product-grid-item"
                 >
                   <div className="relative overflow-hidden bg-gray-100 h-48 sm:h-64 md:h-96">
                     {product.images[0] && (
                       <img
-                        src={product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`}
+                        src={imgSrc(product.images[0])}
                         alt={product.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     )}
