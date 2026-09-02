@@ -531,7 +531,7 @@ export function ProductDetailPage() {
           ) : (
           <div className="space-y-6 mb-8">
 
-            {/* Size */}}
+            {/* Size */}
             {product.sizes?.length > 0 && (
               <div>
                 <label className="block font-semibold mb-3 text-gray-900">Taille</label>
