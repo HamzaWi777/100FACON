@@ -43,7 +43,7 @@ function CheckoutPageContent() {
         numItems: cartItems.length,
       });
     }
-  }, [cartItems]);
+  }, []);
 
   const fetchCart = async () => {
     setLoading(true);

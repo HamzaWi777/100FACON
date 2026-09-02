@@ -296,19 +296,35 @@ export function ProductDetailPage() {
      if (product?.images?.length) preloadImages(product.images);
    }, [product]);
 
-   const handleAddToCart = async () => {
+   const handleAddToCart = async (mode = 'single') => {
     if (isMM) {
       const itemsToAdd = [];
-      if (adultSize && adultColor) {
-        const adultKey = `${adultSize}_${adultColor}`;
-        if ((product.variants?.[adultKey] || 0) > 0) {
-          itemsToAdd.push({ size: adultSize, color: adultColor, quantity: adultQty, label: 'adulte' });
+      if (mode === 'adult' || mode === 'both') {
+        if (adultSize && adultColor) {
+          const adultKey = `${adultSize}_${adultColor}`;
+          if ((product.variants?.[adultKey] || 0) > 0) {
+            itemsToAdd.push({ size: adultSize, color: adultColor, quantity: adultQty, label: 'adulte' });
+          } else if (mode === 'adult') {
+            toast.error('La combinaison taille/couleur adulte sélectionnée est en rupture de stock');
+            return;
+          }
+        } else if (mode === 'adult') {
+          toast.error('Veuillez sélectionner une taille et couleur pour l\'adulte');
+          return;
         }
       }
-      if (enfantSize && enfantColor) {
-        const enfantKey = `${enfantSize}_${enfantColor}`;
-        if ((product.variants?.[enfantKey] || 0) > 0) {
-          itemsToAdd.push({ size: enfantSize, color: enfantColor, quantity: enfantQty, label: 'enfant' });
+      if (mode === 'enfant' || mode === 'both') {
+        if (enfantSize && enfantColor) {
+          const enfantKey = `${enfantSize}_${enfantColor}`;
+          if ((product.variants?.[enfantKey] || 0) > 0) {
+            itemsToAdd.push({ size: enfantSize, color: enfantColor, quantity: enfantQty, label: 'enfant' });
+          } else if (mode === 'enfant') {
+            toast.error('La combinaison taille/couleur enfant sélectionnée est en rupture de stock');
+            return;
+          }
+        } else if (mode === 'enfant') {
+          toast.error('Veuillez sélectionner une taille et couleur pour l\'enfant');
+          return;
         }
       }
       if (itemsToAdd.length === 0) {
@@ -334,6 +350,7 @@ export function ProductDetailPage() {
       return;
     }
 
+    // Regular (non matchy) product
     if (!selectedSize || !selectedColor) {
       toast.error('Please select size and color');
       return;
@@ -510,16 +527,24 @@ export function ProductDetailPage() {
           </p>
 
           {/* Price + stock */}
-          <div className="flex flex-wrap items-baseline gap-4 mb-8 md:mb-10 pb-6 border-b border-purple-200">
-            <span className="text-3xl md:text-4xl font-bold text-purple-600">
-              TND {product.price.toFixed(2)}
-            </span>
-            {isMM && product.enfant_price && (
-              <span className="text-lg md:text-xl font-bold text-pink-600">
-                Enfant: TND {product.enfant_price.toFixed(2)}
+          <div className="mb-8 md:mb-10 pb-6 border-b border-purple-200">
+            {isMM && product.enfant_price ? (
+              <div className="flex items-end gap-6 mb-4">
+                <div>
+                  <span className="text-xs text-gray-500 font-medium uppercase">Adulte</span>
+                  <div className="text-3xl md:text-4xl font-bold text-purple-600">TND {product.price.toFixed(2)}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-500 font-medium uppercase">Enfant</span>
+                  <div className="text-3xl md:text-4xl font-bold text-pink-600">TND {product.enfant_price.toFixed(2)}</div>
+                </div>
+              </div>
+            ) : (
+              <span className="text-3xl md:text-4xl font-bold text-purple-600">
+                TND {product.price.toFixed(2)}
               </span>
             )}
-            <span className={`text-sm md:text-base font-semibold ${product.stock > 0 ? 'text-green-600 bg-green-50 px-3 py-1 rounded-full' : 'text-red-600 bg-red-50 px-3 py-1 rounded-full'}`}>
+            <span className={`inline-flex text-xs md:text-sm font-semibold ${product.stock > 0 ? 'text-green-600 bg-green-50 px-3 py-1 rounded-full' : 'text-red-600 bg-red-50 px-3 py-1 rounded-full'}`}>
               {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
             </span>
           </div>
@@ -634,13 +659,39 @@ export function ProductDetailPage() {
 
           {/* Sticky CTA on mobile */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
-            <button
-              onClick={handleAddToCart}
-              disabled={isMM ? !((adultSize && adultColor) || (enfantSize && enfantColor)) : currentVariantStock === 0}
-              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
-            >
-              {isMM ? 'Ajouter au panier' : (currentVariantStock === 0 ? 'Rupture de stock' : 'Ajouter au panier')}
-            </button>
+            {isMM ? (
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => handleAddToCart('adult')}
+                  disabled={!(adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0)}
+                  className="bg-pink-600 text-white py-4 rounded-full hover:bg-pink-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                >
+                  Acheter l'adulte
+                </button>
+                <button
+                  onClick={() => handleAddToCart('enfant')}
+                  disabled={!(enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0)}
+                  className="bg-purple-600 text-white py-4 rounded-full hover:bg-purple-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                >
+                  Acheter l'enfant
+                </button>
+                <button
+                  onClick={() => handleAddToCart('both')}
+                  disabled={!((adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0) || (enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0))}
+                  className="bg-gradient-to-r from-pink-600 to-purple-700 text-white py-4 rounded-full hover:brightness-110 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                >
+                  Les deux
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => handleAddToCart('single')}
+                disabled={currentVariantStock === 0}
+                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
+              >
+                {currentVariantStock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+              </button>
+            )}
           </div>
 
           {/* Spacer so content isn't hidden behind the sticky bar on mobile */}
