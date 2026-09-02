@@ -764,7 +764,7 @@ export function ProductDetailPage() {
       </div>
 
       {/* Purchase CTA at the end of the product content */}
-      <div className="mt-3 mb-8 md:max-w-xl md:mx-auto">
+      <div className="mt-3 mb-8 md:hidden">
         {renderPurchaseButton()}
       </div>
 
