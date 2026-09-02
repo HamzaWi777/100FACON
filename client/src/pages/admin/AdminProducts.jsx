@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { productService } from '../../services';
+import { ColorPalette } from '../../components/ColorSwatches';
 
 const DEFAULT_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52'];
 const ENFANTS_SIZES = ['6', '8', '10', '12', '14'];
@@ -17,7 +18,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: '', enfantColors: '', isMatchyMatchy: false });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false });
   const [variantStock, setVariantStock] = useState({});
   const [images, setImages] = useState([]);
 
@@ -72,8 +73,8 @@ export function AdminProducts() {
       toast.error('Please set stock for at least one size/color combination');
       return;
     }
-    const colors = formData.colors.split(',').map(c => c.trim()).filter(c => c);
-    const enfantColors = formData.enfantColors.split(',').map(c => c.trim()).filter(c => c);
+    const colors = formData.colors;
+    const enfantColors = formData.enfantColors;
     const isMatchy = formData.category === 'matchy_matchy' || formData.isMatchyMatchy;
     const fd = new FormData();
     fd.append('name', formData.name);
@@ -114,8 +115,8 @@ export function AdminProducts() {
       price: product.price,
       enfantPrice: product.enfant_price || '',
       category: product.category,
-      colors: product.colors.join(', '),
-      enfantColors: product.enfant_colors ? product.enfant_colors.join(', ') : '',
+      colors: product.colors || [],
+      enfantColors: product.enfant_colors || [],
       isMatchyMatchy: isMatchy,
     });
     setVariantStock(product.variants || {});
@@ -137,21 +138,30 @@ export function AdminProducts() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: '', enfantColors: '', isMatchyMatchy: false });
+    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false });
     setVariantStock({});
     setImages([]);
     setEditingId(null);
     setShowForm(false);
   };
 
-  const colors = formData.colors.split(',').map(c => c.trim()).filter(c => c);
+  const colors = formData.colors;
   const displayColors = colors.length > 0 ? colors : ['No Color'];
-  const enfantColorsArr = formData.enfantColors.split(',').map(c => c.trim()).filter(c => c);
+  const enfantColorsArr = formData.enfantColors;
   const displayEnfantColors = enfantColorsArr.length > 0 ? enfantColorsArr : ['No Color'];
   const isMM = formData.category === 'matchy_matchy';
   const adultActiveSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
   const enfantActiveSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
   const activeSizes = isMM ? adultActiveSizes : sizesForCategory(formData.category);
+
+  const toggleColor = (field, color) => {
+    setFormData((current) => ({
+      ...current,
+      [field]: current[field].includes(color)
+        ? current[field].filter((selectedColor) => selectedColor !== color)
+        : [...current[field], color],
+    }));
+  };
 
   return (
     <div>
@@ -205,9 +215,8 @@ export function AdminProducts() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">{isMM ? 'Couleurs adulte (séparées par des virgules)' : 'Couleurs (séparées par des virgules)'}</label>
-                <input type="text" name="colors" value={formData.colors} onChange={handleInputChange} placeholder="Rouge, Bleu, Noir"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                <label className="block text-sm font-medium text-gray-900 mb-2">{isMM ? 'Couleurs adulte' : 'Couleurs'}</label>
+                <ColorPalette selectedColors={formData.colors} onToggle={(color) => toggleColor('colors', color)} name="Couleurs adulte" />
               </div>
             </div>
 
@@ -220,9 +229,8 @@ export function AdminProducts() {
                     className="w-full px-4 py-2 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs enfant (séparées par des virgules)</label>
-                  <input type="text" name="enfantColors" value={formData.enfantColors} onChange={handleInputChange} placeholder="Rose, Bleu, Vert"
-                    className="w-full px-4 py-2 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500" />
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs enfant</label>
+                  <ColorPalette selectedColors={formData.enfantColors} onToggle={(color) => toggleColor('enfantColors', color)} name="Couleurs enfant" />
                 </div>
               </div>
             )}
