@@ -760,16 +760,16 @@ export function ProductDetailPage() {
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
             {renderPurchaseButton()}
           </div>
-
-          {/* Spacer so content isn't hidden behind the sticky bar on mobile */}
-          <div className="h-24 md:h-0" />
         </div>
       </div>
 
       {/* Purchase CTA at the end of the product content */}
-      <div className="mt-3 mb-15 md:max-w-xl md:mx-auto">
+      <div className="mt-3 mb-8 md:max-w-xl md:mx-auto">
         {renderPurchaseButton()}
       </div>
+
+      {/* Spacer so the page end isn't hidden behind the floating bar on mobile */}
+      <div className="h-24 md:h-0" />
 
       {lightboxOpen && (
         <div
