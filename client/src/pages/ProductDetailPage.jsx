@@ -423,15 +423,6 @@ export function ProductDetailPage() {
 
   const currentVariantStock = product ? getVariantStock() : 0;
 
-  const selectedStock = isMM
-    ? (selectionMode === 'adult'
-      ? adultSize && adultColor ? product.variants?.[`${adultSize}_${adultColor}`] || 0 : 0
-      : selectionMode === 'enfant'
-        ? enfantSize && enfantColor ? product.variants?.[`${enfantSize}_${enfantColor}`] || 0 : 0
-        : (adultSize && adultColor ? product.variants?.[`${adultSize}_${adultColor}`] || 0 : 0)
-          + (enfantSize && enfantColor ? product.variants?.[`${enfantSize}_${enfantColor}`] || 0 : 0))
-    : currentVariantStock;
-
   const imageIndexForColor = (colors, color) => {
     const index = colors.indexOf(color);
     return index >= 0 && index < (product?.images?.length || 0) ? index : -1;
@@ -685,8 +676,8 @@ export function ProductDetailPage() {
                 TND {product.price.toFixed(2)}
               </span>
             )}
-            <span className={`inline-flex text-xs md:text-sm font-semibold ${selectedStock > 0 ? 'text-green-600 bg-green-50 px-3 py-1 rounded-full' : 'text-red-600 bg-red-50 px-3 py-1 rounded-full'}`}>
-              {selectedStock > 0 ? `${selectedStock} en stock` : 'Rupture de stock'}
+            <span className={`inline-flex text-xs md:text-sm font-semibold ${product.stock > 0 ? 'text-green-600 bg-green-50 px-3 py-1 rounded-full' : 'text-red-600 bg-red-50 px-3 py-1 rounded-full'}`}>
+              {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
             </span>
           </div>
 
