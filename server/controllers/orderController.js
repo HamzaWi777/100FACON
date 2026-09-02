@@ -10,17 +10,23 @@ export async function createOrder(req, res) {
     const location = governorate || wilaya;
 
     let cartItems = [];
-    
+
     // Get cart items based on user type
     if (userId) {
       // Authenticated user cart from database
       const [items] = await pool.query(
-        `SELECT c.*, p.price FROM cart c 
+        `SELECT c.*, p.price as product_price, p.name, p.images 
+         FROM cart c 
          JOIN products p ON c.product_id = p.id 
          WHERE c.user_id = ?`,
         [userId]
       );
-      cartItems = items;
+      // Use cart's per-item price if available, fallback to product price
+      cartItems = items.map(item => ({
+        ...item,
+        price: item.price != null ? parseFloat(item.price) : (item.product_price ? parseFloat(item.product_price) : 0),
+        images: item.images ? (typeof item.images === 'string' && item.images.startsWith('[') ? JSON.parse(item.images) : [item.images]) : [],
+      }));
     } else if (bodyCartItems && Array.isArray(bodyCartItems)) {
       // Guest cart from request body (localStorage)
       cartItems = bodyCartItems;

@@ -17,7 +17,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: 'men', colors: '', isMatchyMatchy: false });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: '', enfantColors: '', isMatchyMatchy: false });
   const [variantStock, setVariantStock] = useState({});
   const [images, setImages] = useState([]);
 
@@ -73,18 +73,21 @@ export function AdminProducts() {
       return;
     }
     const colors = formData.colors.split(',').map(c => c.trim()).filter(c => c);
+    const enfantColors = formData.enfantColors.split(',').map(c => c.trim()).filter(c => c);
+    const isMatchy = formData.category === 'matchy_matchy' || formData.isMatchyMatchy;
     const fd = new FormData();
     fd.append('name', formData.name);
     fd.append('description', formData.description);
     fd.append('price', formData.price);
+    fd.append('enfantPrice', isMatchy ? formData.enfantPrice : '');
     fd.append('category', formData.category);
     fd.append('colors', JSON.stringify(colors));
-    const isMatchy = formData.category === 'matchy_matchy' || formData.isMatchyMatchy;
     const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
     const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
     fd.append('isMatchyMatchy', isMatchy);
     fd.append('sizes', JSON.stringify(isMatchy ? adultSizes : sizesForCategory(formData.category)));
     fd.append('enfantSizes', JSON.stringify(isMatchy ? enfantSizes : []));
+    fd.append('enfantColors', JSON.stringify(isMatchy ? enfantColors : []));
     fd.append('variantStock', JSON.stringify(variantStock));
     images.forEach((image) => fd.append('images', image.file));
     try {
@@ -103,11 +106,16 @@ export function AdminProducts() {
   };
 
   const handleEdit = (product) => {
-    setEditingId(product.id);
     const isMatchy = product.is_matchy_matchy || product.category === 'matchy_matchy';
+    setEditingId(product.id);
     setFormData({
-      name: product.name, description: product.description, price: product.price,
-      category: product.category, colors: product.colors.join(', '),
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      enfantPrice: product.enfant_price || '',
+      category: product.category,
+      colors: product.colors.join(', '),
+      enfantColors: product.enfant_colors ? product.enfant_colors.join(', ') : '',
       isMatchyMatchy: isMatchy,
     });
     setVariantStock(product.variants || {});
@@ -129,7 +137,7 @@ export function AdminProducts() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', price: '', category: 'men', colors: '', isMatchyMatchy: false });
+    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: '', enfantColors: '', isMatchyMatchy: false });
     setVariantStock({});
     setImages([]);
     setEditingId(null);
@@ -138,6 +146,8 @@ export function AdminProducts() {
 
   const colors = formData.colors.split(',').map(c => c.trim()).filter(c => c);
   const displayColors = colors.length > 0 ? colors : ['No Color'];
+  const enfantColorsArr = formData.enfantColors.split(',').map(c => c.trim()).filter(c => c);
+  const displayEnfantColors = enfantColorsArr.length > 0 ? enfantColorsArr : ['No Color'];
   const isMM = formData.category === 'matchy_matchy';
   const adultActiveSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
   const enfantActiveSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
@@ -190,16 +200,32 @@ export function AdminProducts() {
             {/* Price + Colors */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Prix (TND)</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">{isMM ? 'Prix adulte (TND)' : 'Prix (TND)'}</label>
                 <input type="number" name="price" value={formData.price} onChange={handleInputChange} step="0.01" required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs (séparées par des virgules)</label>
+                <label className="block text-sm font-medium text-gray-900 mb-2">{isMM ? 'Couleurs adulte (séparées par des virgules)' : 'Couleurs (séparées par des virgules)'}</label>
                 <input type="text" name="colors" value={formData.colors} onChange={handleInputChange} placeholder="Rouge, Bleu, Noir"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
               </div>
             </div>
+
+            {/* Matchy Matchy: Enfant Price + Colors */}
+            {isMM && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-pink-50 rounded-lg border border-pink-200">
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Prix enfant (TND)</label>
+                  <input type="number" name="enfantPrice" value={formData.enfantPrice} onChange={handleInputChange} step="0.01" required
+                    className="w-full px-4 py-2 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs enfant (séparées par des virgules)</label>
+                  <input type="text" name="enfantColors" value={formData.enfantColors} onChange={handleInputChange} placeholder="Rose, Bleu, Vert"
+                    className="w-full px-4 py-2 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500" />
+                </div>
+              </div>
+            )}
 
             {/* Variant stock — horizontal scroll on mobile */}
             <div>
@@ -244,17 +270,17 @@ export function AdminProducts() {
                         <thead>
                           <tr className="bg-pink-100 border-b-2 border-purple-200">
                             <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-pink-100">Taille (Enfant)</th>
-                            {displayColors.map(color => (
-                              <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                             {displayEnfantColors.map(color => (
+                               <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {enfantActiveSizes.map(size => (
                             <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
-                              <td className="px-4 py-2 font-medium text-sm bg-pink-50 sticky left-0">{size.replace(ENFANT_SIZE_PREFIX, '')}</td>
-                              {displayColors.map(color => (
-                                <td key={`${size}-${color}`} className="px-4 py-2">
+                               <td className="px-4 py-2 font-medium text-sm bg-pink-50 sticky left-0">{size.replace(ENFANT_SIZE_PREFIX, '')}</td>
+                               {displayEnfantColors.map(color => (
+                                 <td key={`${size}-${color}`} className="px-4 py-2">
                                   <input type="number" min="0"
                                     value={variantStock[`${size}_${color}`] || ''}
                                     onChange={(e) => handleVariantStockChange(size, color, e.target.value)}

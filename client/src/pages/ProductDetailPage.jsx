@@ -198,7 +198,7 @@ function MatchyMatchyForm({
           onChange={(e) => setEnfantColor(e.target.value)}
           className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium"
         >
-          {product.colors.map(color => {
+          {(product.enfant_colors || product.colors).map(color => {
             const colorStock = Object.entries(variants).reduce(
               (sum, [key, stock]) => key.startsWith('enfant_') && key.endsWith('_' + color) ? sum + stock : sum, 0
             );
@@ -317,11 +317,12 @@ export function ProductDetailPage() {
       }
       try {
         for (const item of itemsToAdd) {
+          const itemPrice = item.label === 'adulte' ? product.price : (product.enfant_price || product.price);
           if (isAuthenticated) {
-            await cartService.addToCart({ product_id: product.id, quantity: item.quantity, size: item.size, color: item.color });
+            await cartService.addToCart({ product_id: product.id, quantity: item.quantity, size: item.size, color: item.color, price: itemPrice });
           } else {
             getOrCreateGuestSessionId();
-            addToGuestCart(product, item.quantity, item.size, item.color);
+            addToGuestCart(product, item.quantity, item.size, item.color, itemPrice);
           }
         }
         trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: itemsToAdd.reduce((s, i) => s + i.quantity, 0) });
@@ -513,6 +514,11 @@ export function ProductDetailPage() {
             <span className="text-3xl md:text-4xl font-bold text-purple-600">
               TND {product.price.toFixed(2)}
             </span>
+            {isMM && product.enfant_price && (
+              <span className="text-lg md:text-xl font-bold text-pink-600">
+                Enfant: TND {product.enfant_price.toFixed(2)}
+              </span>
+            )}
             <span className={`text-sm md:text-base font-semibold ${product.stock > 0 ? 'text-green-600 bg-green-50 px-3 py-1 rounded-full' : 'text-red-600 bg-red-50 px-3 py-1 rounded-full'}`}>
               {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
             </span>

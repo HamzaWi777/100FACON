@@ -9,6 +9,12 @@ function parseVariantKey(key) {
   return { variantType: 'adult', size: parts[0], color: parts.slice(1).join('_') };
 }
 
+function safeParseJSON(value, fallback) {
+  if (!value) return fallback;
+  try { return typeof value === 'string' ? JSON.parse(value) : value; }
+  catch { return fallback; }
+}
+
 export async function getAllProducts(req, res) {
   try {
     console.log('📥 Received query params:', req.query); // ADD THIS
@@ -90,6 +96,7 @@ export async function getAllProducts(req, res) {
     let sizes = [];
     let colors = [];
     let enfantSizes = [];
+    let enfantColors = [];
 
     try {
       if (p.images) {
@@ -147,6 +154,12 @@ export async function getAllProducts(req, res) {
       enfantSizes = [];
     }
 
+    try {
+      enfantColors = safeParseJSON(p.enfant_colors, []);
+    } catch (e) {
+      enfantColors = [];
+    }
+
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [p.id]);
     const variantStock = {};
     variants.forEach(v => {
@@ -157,8 +170,10 @@ export async function getAllProducts(req, res) {
     return {
       ...p,
       price: parseFloat(p.price),
+      enfant_price: p.enfant_price ? parseFloat(p.enfant_price) : null,
       is_matchy_matchy: p.is_matchy_matchy ? p.is_matchy_matchy === 1 : false,
       enfant_sizes: enfantSizes,
+      enfant_colors: enfantColors,
       images,
       sizes,
       colors,
@@ -198,6 +213,7 @@ export async function getProductById(req, res) {
     let sizes = [];
     let colors = [];
     let enfantSizes = [];
+    let enfantColors = []
 
     try {
       if (product.images) {
@@ -233,6 +249,8 @@ export async function getProductById(req, res) {
       console.warn(`Invalid JSON in enfant_sizes for product ${id}`);
     }
 
+    enfantColors = safeParseJSON(product.enfant_colors, []);
+
     // Fetch variants for this product
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [id]);
     const variantStock = {};
@@ -244,8 +262,10 @@ export async function getProductById(req, res) {
     res.json({
       ...product,
       price: parseFloat(product.price),
+      enfant_price: product.enfant_price ? parseFloat(product.enfant_price) : null,
       is_matchy_matchy: product.is_matchy_matchy ? product.is_matchy_matchy === 1 : false,
       enfant_sizes: enfantSizes,
+      enfant_colors: enfantColors,
       images,
       sizes,
       colors,
@@ -258,7 +278,7 @@ export async function getProductById(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, description, price, category, sizes, colors, variantStock, isMatchyMatchy, enfantSizes } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, isMatchyMatchy, enfantSizes } = req.body;
 
     let parsedVariantStock = {};
     if (variantStock) {
@@ -276,6 +296,15 @@ export async function createProduct(req, res) {
         parsedEnfantSizes = typeof enfantSizes === 'string' ? JSON.parse(enfantSizes) : enfantSizes;
       } catch (e) {
         parsedEnfantSizes = [];
+      }
+    }
+
+    let parsedEnfantColors = [];
+    if (enfantColors) {
+      try {
+        parsedEnfantColors = typeof enfantColors === 'string' ? JSON.parse(enfantColors) : enfantColors;
+      } catch (e) {
+        parsedEnfantColors = [];
       }
     }
 
@@ -327,18 +356,20 @@ export async function createProduct(req, res) {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO products (name, description, price, category, stock, images, sizes, colors, is_matchy_matchy, enfant_sizes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO products (name, description, price, enfant_price, category, stock, images, sizes, colors, enfant_colors, is_matchy_matchy, enfant_sizes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         name,
         description,
         price,
+        isMatchyMatchy ? (enfantPrice || null) : null,
         category,
         totalStock,
         JSON.stringify(images),
         JSON.stringify(parsedSizes),
         JSON.stringify(parsedColors),
+        JSON.stringify(isMatchyMatchy ? parsedEnfantColors : []),
         isMatchyMatchy ? 1 : 0,
-        JSON.stringify(parsedEnfantSizes),
+        JSON.stringify(isMatchyMatchy ? parsedEnfantSizes : []),
       ]
     );
 
@@ -367,7 +398,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, price, category, sizes, colors, variantStock, isMatchyMatchy, enfantSizes } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, isMatchyMatchy, enfantSizes } = req.body;
 
     const [products] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
     if (products.length === 0) {
@@ -399,6 +430,24 @@ export async function updateProduct(req, res) {
         parsedEnfantSizes = typeof products[0].enfant_sizes === 'string' ? JSON.parse(products[0].enfant_sizes) : products[0].enfant_sizes;
       } catch (e) {
         parsedEnfantSizes = [];
+      }
+    }
+
+    let parsedEnfantColors = [];
+    if (enfantColors) {
+      try {
+        parsedEnfantColors = typeof enfantColors === 'string' ? JSON.parse(enfantColors) : enfantColors;
+      } catch (e) {
+        parsedEnfantColors = [];
+      }
+    }
+
+    // Backward compat: parse enfant_colors from DB
+    if (!enfantColors && products[0].enfant_colors) {
+      try {
+        parsedEnfantColors = typeof products[0].enfant_colors === 'string' ? JSON.parse(products[0].enfant_colors) : products[0].enfant_colors;
+      } catch (e) {
+        parsedEnfantColors = [];
       }
     }
 
@@ -467,18 +516,20 @@ export async function updateProduct(req, res) {
     }
 
     await pool.query(
-      'UPDATE products SET name = ?, description = ?, price = ?, category = ?, stock = ?, images = ?, sizes = ?, colors = ?, is_matchy_matchy = ?, enfant_sizes = ? WHERE id = ?',
+      'UPDATE products SET name = ?, description = ?, price = ?, enfant_price = ?, category = ?, stock = ?, images = ?, sizes = ?, colors = ?, enfant_colors = ?, is_matchy_matchy = ?, enfant_sizes = ? WHERE id = ?',
       [
         name,
         description,
         price,
+        isMatchyMatchy ? (enfantPrice || null) : null,
         category,
         totalStock,
         JSON.stringify(existingImages),
         JSON.stringify(parsedSizes),
         JSON.stringify(parsedColors),
+        JSON.stringify(isMatchyMatchy ? parsedEnfantColors : []),
         isMatchyMatchy ? 1 : 0,
-        JSON.stringify(parsedEnfantSizes),
+        JSON.stringify(isMatchyMatchy ? parsedEnfantSizes : []),
         id,
       ]
     );

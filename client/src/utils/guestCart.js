@@ -25,8 +25,9 @@ export function clearGuestCart() {
   localStorage.removeItem(GUEST_SESSION_ID_KEY);
 }
 
-export function addToGuestCart(product, quantity = 1, size = '', color = '') {
+export function addToGuestCart(product, quantity = 1, size = '', color = '', price = null) {
   const cart = getGuestCart();
+  const itemPrice = price !== null ? price : product.price;
   
   // Check if item already exists
   const existingItem = cart.find(
@@ -40,7 +41,7 @@ export function addToGuestCart(product, quantity = 1, size = '', color = '') {
       id: `guest_${product.id}_${Date.now()}`,
       product_id: product.id,
       name: product.name,
-      price: product.price,
+      price: itemPrice,
       images: product.images,
       quantity,
       size,

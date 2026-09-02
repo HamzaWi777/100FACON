@@ -5,7 +5,7 @@ export async function getCart(req, res) {
     const userId = req.user.id;
 
     const [cartItems] = await pool.query(
-      `SELECT c.*, p.name, p.price, p.images 
+      `SELECT c.*, p.name, p.price as product_price, p.images 
        FROM cart c 
        JOIN products p ON c.product_id = p.id 
        WHERE c.user_id = ?`,
@@ -15,13 +15,12 @@ export async function getCart(req, res) {
     const parsedItems = cartItems.map(item => {
       let images = [];
       
-      // Safe JSON parsing for images
       try {
         if (item.images) {
           if (typeof item.images === 'string') {
             images = JSON.parse(item.images);
           } else {
-            images = item.images; // Already parsed by MySQL
+            images = item.images;
           }
         }
       } catch (e) {
@@ -31,7 +30,7 @@ export async function getCart(req, res) {
 
       return {
         ...item,
-        price: parseFloat(item.price),  // ✅ Convert price to number
+        price: item.price != null ? parseFloat(item.price) : (item.product_price ? parseFloat(item.product_price) : 0),
         images,
       };
     });
@@ -46,7 +45,7 @@ export async function getCart(req, res) {
 export async function addToCart(req, res) {
   try {
     const userId = req.user.id;
-    const { product_id, quantity, size, color } = req.body;
+    const { product_id, quantity, size, color, price } = req.body;
 
     const [products] = await pool.query('SELECT stock FROM products WHERE id = ?', [product_id]);
     if (products.length === 0) {
@@ -88,8 +87,8 @@ export async function addToCart(req, res) {
     } else {
       // Add new item
       await pool.query(
-        'INSERT INTO cart (user_id, product_id, quantity, size, color) VALUES (?, ?, ?, ?, ?)',
-        [userId, product_id, quantity, size, color]
+        'INSERT INTO cart (user_id, product_id, quantity, size, color, price) VALUES (?, ?, ?, ?, ?, ?)',
+        [userId, product_id, quantity, size, color, price || null]
       );
     }
 
