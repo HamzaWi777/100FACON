@@ -75,7 +75,7 @@ export function AdminProducts() {
     }
     const colors = formData.colors;
     const enfantColors = formData.enfantColors;
-    const isMatchy = formData.category === 'matchy_matchy' || formData.isMatchyMatchy;
+    const isMatchy = formData.category === 'matchy_matchy';
     const fd = new FormData();
     fd.append('name', formData.name);
     fd.append('description', formData.description);
