@@ -15,6 +15,14 @@ function safeParseJSON(value, fallback) {
   catch { return fallback; }
 }
 
+function filterVariantStock(variantStock, sizes, colors, enfantSizes, enfantColors, isMatchyProduct) {
+  const validKeys = new Set([
+    ...(isMatchyProduct ? enfantSizes : []).flatMap(size => enfantColors.map(color => `${size}_${color}`)),
+    ...sizes.flatMap(size => colors.map(color => `${size}_${color}`)),
+  ]);
+  return Object.fromEntries(Object.entries(variantStock).filter(([key]) => validKeys.has(key)));
+}
+
 export async function getAllProducts(req, res) {
   try {
     console.log('📥 Received query params:', req.query); // ADD THIS
@@ -169,6 +177,7 @@ export async function getAllProducts(req, res) {
 
     return {
       ...p,
+      stock: variants.reduce((sum, variant) => sum + (parseInt(variant.stock, 10) || 0), 0),
       price: parseFloat(p.price),
       enfant_price: p.enfant_price ? parseFloat(p.enfant_price) : null,
       is_matchy_matchy: p.is_matchy_matchy ? p.is_matchy_matchy === 1 : false,
@@ -261,6 +270,7 @@ export async function getProductById(req, res) {
 
     res.json({
       ...product,
+      stock: variants.reduce((sum, variant) => sum + (parseInt(variant.stock, 10) || 0), 0),
       price: parseFloat(product.price),
       enfant_price: product.enfant_price ? parseFloat(product.enfant_price) : null,
       is_matchy_matchy: product.is_matchy_matchy ? product.is_matchy_matchy === 1 : false,
@@ -350,6 +360,15 @@ export async function createProduct(req, res) {
         parsedSizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
       }
     }
+
+    parsedVariantStock = filterVariantStock(
+      parsedVariantStock,
+      parsedSizes,
+      safeParseJSON(colors, []),
+      parsedEnfantSizes,
+      parsedEnfantColors,
+      isMatchyProduct
+    );
 
     let totalStock = 0;
     if (parsedVariantStock && typeof parsedVariantStock === 'object') {
@@ -470,6 +489,15 @@ export async function updateProduct(req, res) {
         parsedSizes = ['36', '38', '40', '42', '44', '46', '48', '50'];
       }
     }
+
+    parsedVariantStock = filterVariantStock(
+      parsedVariantStock,
+      parsedSizes,
+      safeParseJSON(colors, []),
+      parsedEnfantSizes,
+      parsedEnfantColors,
+      isMatchyProduct
+    );
 
     let existingImages = [];
     if (products[0].images) {
