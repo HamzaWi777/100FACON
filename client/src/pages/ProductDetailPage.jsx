@@ -666,7 +666,7 @@ export function ProductDetailPage() {
           )}
 
           {/* Sticky CTA on mobile */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none mb-20 md:mb-0">
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
             {isMM ? (
               <div className="grid grid-cols-3 gap-2">
                 <button
