@@ -439,6 +439,44 @@ export function ProductDetailPage() {
 
   const currentVariantStock = product ? getVariantStock() : 0;
 
+  const renderPurchaseButton = () => {
+    if (isMM) {
+      const adultAvailable = adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0;
+      const enfantAvailable = enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0;
+      let disabled = false;
+      let label = 'Acheter';
+      if (selectionMode === 'adult') {
+        disabled = !adultAvailable;
+        label = 'Acheter l\'adulte';
+      } else if (selectionMode === 'enfant') {
+        disabled = !enfantAvailable;
+        label = 'Acheter l\'enfant';
+      } else {
+        disabled = !adultAvailable && !enfantAvailable;
+        label = 'Acheter les deux';
+      }
+      return (
+        <button
+          onClick={() => handleAddToCart(selectionMode === 'both' ? 'both' : selectionMode)}
+          disabled={disabled}
+          className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
+        >
+          {label}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => handleAddToCart('single')}
+        disabled={currentVariantStock === 0}
+        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
+      >
+        {currentVariantStock === 0 ? 'Rupture de stock' : 'Acheter'}
+      </button>
+    );
+  };
+
 
   // ── Lightbox ──
   const openLightbox = (index) => {
@@ -720,44 +758,17 @@ export function ProductDetailPage() {
 
           {/* Sticky CTA on mobile */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
-            {isMM ? (() => {
-              const adultAvailable = adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0;
-              const enfantAvailable = enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0;
-              let disabled = false;
-              let label = 'Acheter';
-              if (selectionMode === 'adult') {
-                disabled = !adultAvailable;
-                label = 'Acheter l\'adulte';
-              } else if (selectionMode === 'enfant') {
-                disabled = !enfantAvailable;
-                label = 'Acheter l\'enfant';
-              } else {
-                disabled = !adultAvailable && !enfantAvailable;
-                label = 'Acheter les deux';
-              }
-              return (
-                <button
-                  onClick={() => handleAddToCart(selectionMode === 'both' ? 'both' : selectionMode)}
-                  disabled={disabled}
-                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
-                >
-                  {label}
-                </button>
-              );
-            })() : (
-              <button
-                onClick={() => handleAddToCart('single')}
-                disabled={currentVariantStock === 0}
-                className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
-              >
-                {currentVariantStock === 0 ? 'Rupture de stock' : 'Acheter'}
-              </button>
-            )}
+            {renderPurchaseButton()}
           </div>
 
           {/* Spacer so content isn't hidden behind the sticky bar on mobile */}
           <div className="h-24 md:h-0" />
         </div>
+      </div>
+
+      {/* Purchase CTA at the end of the product content */}
+      <div className="mt-8 mb-8 md:max-w-xl md:mx-auto">
+        {renderPurchaseButton()}
       </div>
 
       {lightboxOpen && (
