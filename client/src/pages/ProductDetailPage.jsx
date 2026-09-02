@@ -275,11 +275,19 @@ export function ProductDetailPage() {
       const response = await productService.getById(id);
       const data = response.data;
        setProduct(data);
-       if (data.is_matchy_matchy) {
-         if (data.sizes?.length > 0) setAdultSize(data.sizes[0]);
-         if (data.colors?.length > 0) setAdultColor(data.colors[0]);
-         if (data.enfant_sizes?.length > 0) setEnfantSize(data.enfant_sizes[0]);
-         if (data.colors?.length > 0) setEnfantColor(data.colors[0]);
+        if (data.is_matchy_matchy) {
+          if (data.sizes?.length > 0) setAdultSize(data.sizes[0]);
+          if (data.colors?.length > 0) setAdultColor(data.colors[0]);
+          if (data.enfant_sizes?.length > 0) setEnfantSize(data.enfant_sizes[0]);
+          const enfantColors = data.enfant_colors || data.colors || [];
+          const firstAvailEnfantColor = enfantColors.find(color => {
+            const stock = Object.entries(data.variants || {}).reduce(
+              (sum, [key, s]) => key.startsWith('enfant_') && key.endsWith('_' + color) ? sum + s : sum, 0
+            );
+            return stock > 0;
+          });
+          if (firstAvailEnfantColor) setEnfantColor(firstAvailEnfantColor);
+          else if (enfantColors.length > 0) setEnfantColor(enfantColors[0]);
        } else {
          if (data.sizes?.length > 0) setSelectedSize(data.sizes[0]);
          if (data.colors?.length > 0) setSelectedColor(data.colors[0]);
