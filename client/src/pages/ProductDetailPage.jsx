@@ -351,7 +351,7 @@ export function ProductDetailPage() {
         }
         trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: itemsToAdd.reduce((s, i) => s + i.quantity, 0) });
         toast.success('Article(s) ajouté(s) au panier');
-        navigate('/cart');
+        navigate('/cart', { state: { scrollToSummary: true } });
       } catch (error) {
         toast.error(error.response?.data?.error || 'Failed to add to cart');
       }
@@ -377,7 +377,7 @@ export function ProductDetailPage() {
       }
       trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity });
       toast.success('Added to cart');
-      navigate('/cart');
+      navigate('/cart', { state: { scrollToSummary: true } });
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to add to cart');
     }
@@ -666,7 +666,7 @@ export function ProductDetailPage() {
           )}
 
           {/* Sticky CTA on mobile */}
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none mb-20 md:mb-0">
             {isMM ? (
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -697,7 +697,7 @@ export function ProductDetailPage() {
                 disabled={currentVariantStock === 0}
                 className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
               >
-                {currentVariantStock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+                {currentVariantStock === 0 ? 'Rupture de stock' : 'Acheter'}
               </button>
             )}
           </div>

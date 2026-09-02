@@ -27,11 +27,20 @@ function PageTracker() {
   return null;
 }
 
+function ScrollRestoration() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <PageTracker />
+        <ScrollRestoration />
         <div className="min-h-screen flex flex-col bg-gray-50">
           <Header />
           <main className="flex-1 container mx-auto px-4 py-8">

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { cartService } from '../services';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,8 @@ import { imgSrc } from '../utils/imgSrc';
 
 export function CartPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const summaryRef = useRef(null);
   const { user } = useAuth();
   const isGuest = !user;
   const [cartItems, setCartItems] = useState([]);
@@ -20,6 +22,13 @@ export function CartPage() {
   useEffect(() => {
     fetchCart();
   }, [user]);
+
+  useEffect(() => {
+    if (location.state?.scrollToSummary && summaryRef.current) {
+      const y = summaryRef.current.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }, [location.state]);
 
   const fetchCart = async () => {
     setLoading(true);
@@ -168,7 +177,7 @@ export function CartPage() {
           </div>
 
           {/* Récapitulatif de commande */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1" ref={summaryRef}>
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-2xl shadow-md border border-purple-100 sticky top-20">
               <h2 className="text-xl font-bold mb-6 text-gray-900">Récapitulatif</h2>
 
