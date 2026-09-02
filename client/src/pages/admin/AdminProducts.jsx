@@ -76,6 +76,19 @@ export function AdminProducts() {
     const colors = formData.colors;
     const enfantColors = formData.enfantColors;
     const isMatchy = formData.category === 'matchy_matchy';
+    const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
+    const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
+    const activeVariantKeys = isMatchy
+      ? [
+        ...adultSizes.flatMap(size => colors.map(color => `${size}_${color}`)),
+        ...enfantSizes.flatMap(size => enfantColors.map(color => `${size}_${color}`)),
+      ]
+      : activeSizes.flatMap(size => colors.map(color => `${size}_${color}`));
+    const submittedVariantStock = Object.fromEntries(
+      activeVariantKeys
+        .filter(key => Object.prototype.hasOwnProperty.call(variantStock, key))
+        .map(key => [key, variantStock[key]])
+    );
     const fd = new FormData();
     fd.append('name', formData.name);
     fd.append('description', formData.description);
@@ -83,13 +96,11 @@ export function AdminProducts() {
     fd.append('enfantPrice', isMatchy ? formData.enfantPrice : '');
     fd.append('category', formData.category);
     fd.append('colors', JSON.stringify(colors));
-    const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
-    const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
     fd.append('isMatchyMatchy', isMatchy);
     fd.append('sizes', JSON.stringify(isMatchy ? adultSizes : sizesForCategory(formData.category)));
     fd.append('enfantSizes', JSON.stringify(isMatchy ? enfantSizes : []));
     fd.append('enfantColors', JSON.stringify(isMatchy ? enfantColors : []));
-    fd.append('variantStock', JSON.stringify(variantStock));
+    fd.append('variantStock', JSON.stringify(submittedVariantStock));
     images.forEach((image) => fd.append('images', image.file));
     try {
       if (editingId) {
