@@ -162,10 +162,8 @@ function MatchyMatchyForm({
           <ColorSwatches
             colors={product.colors}
             value={adultColor}
-            onChange={setAdultColor}
-            getStock={(color) => Object.entries(variants).reduce(
-              (sum, [key, stock]) => key.startsWith('adult_') && key.endsWith('_' + color) ? sum + stock : sum, 0
-            )}
+                    onChange={(color) => selectColorAndImage(color, product.colors, setAdultColor)}
+            getStock={(color) => adultSize ? variants[`${adultSize}_${color}`] || 0 : 0}
             name="Couleur adulte"
           />
         </div>
@@ -231,10 +229,8 @@ function MatchyMatchyForm({
         <ColorSwatches
           colors={product.enfant_colors || product.colors}
           value={enfantColor}
-          onChange={setEnfantColor}
-          getStock={(color) => Object.entries(variants).reduce(
-            (sum, [key, stock]) => key.startsWith('enfant_') && key.endsWith('_' + color) ? sum + stock : sum, 0
-          )}
+          onChange={(color) => selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor)}
+          getStock={(color) => enfantSize ? variants[`${enfantSize}_${color}`] || 0 : 0}
           name="Couleur enfant"
         />
       </div>
@@ -296,6 +292,7 @@ export function ProductDetailPage() {
   const [selectionMode, setSelectionMode] = useState('both');
   const pageCarousel = useSwipeCarousel(product?.images?.length || 0);
   const lightboxCarousel = useSwipeCarousel(product?.images?.length || 0);
+  const carouselSyncSource = useRef(null);
   const isMM = product?.is_matchy_matchy;
 
   useEffect(() => { fetchProduct(); }, [id]);
@@ -425,6 +422,57 @@ export function ProductDetailPage() {
   };
 
   const currentVariantStock = product ? getVariantStock() : 0;
+
+  const imageIndexForColor = (colors, color) => {
+    const index = colors.indexOf(color);
+    return index >= 0 && index < (product?.images?.length || 0) ? index : -1;
+  };
+
+  const selectColorAndImage = (color, colors, setColor) => {
+    const imageIndex = imageIndexForColor(colors, color);
+    carouselSyncSource.current = imageIndex === pageCarousel.index ? null : 'color';
+    setColor(color);
+    if (imageIndex >= 0) pageCarousel.setIndex(imageIndex);
+  };
+
+  // Keep the ordered color list and ordered image list synchronized in both directions.
+  useEffect(() => {
+    if (!product?.images?.length) return;
+    if (carouselSyncSource.current === 'color') {
+      carouselSyncSource.current = null;
+      return;
+    }
+
+    const colors = isMM
+      ? selectionMode === 'enfant' ? (product.enfant_colors || product.colors || []) : (product.colors || [])
+      : product.colors || [];
+    const color = isMM
+      ? selectionMode === 'enfant' ? enfantColor : adultColor
+      : selectedColor;
+    if (colors[pageCarousel.index] && colors[pageCarousel.index] !== color) {
+      if (isMM) {
+        if (selectionMode === 'enfant') setEnfantColor(colors[pageCarousel.index]);
+        else setAdultColor(colors[pageCarousel.index]);
+      } else {
+        setSelectedColor(colors[pageCarousel.index]);
+      }
+    }
+  }, [pageCarousel.index, product, isMM, selectionMode, adultColor, enfantColor, selectedColor]);
+
+  useEffect(() => {
+    if (!product?.images?.length) return;
+    const colors = isMM
+      ? selectionMode === 'enfant' ? (product.enfant_colors || product.colors || []) : (product.colors || [])
+      : product.colors || [];
+    const color = isMM
+      ? selectionMode === 'enfant' ? enfantColor : adultColor
+      : selectedColor;
+    const imageIndex = imageIndexForColor(colors, color);
+    if (imageIndex >= 0 && imageIndex !== pageCarousel.index) {
+      carouselSyncSource.current = 'color';
+      pageCarousel.setIndex(imageIndex);
+    }
+  }, [product, isMM, selectionMode, adultColor, enfantColor, selectedColor]);
 
   const renderPurchaseButton = () => {
     if (isMM) {
@@ -687,10 +735,11 @@ export function ProductDetailPage() {
                 <ColorSwatches
                   colors={product.colors}
                   value={selectedColor}
-                  onChange={(color) => { setSelectedColor(color); setQuantity(1); }}
-                  getStock={(color) => Object.entries(product.variants || {}).reduce(
-                    (sum, [key, stock]) => key.endsWith('_' + color) ? sum + stock : sum, 0
-                  )}
+                  onChange={(color) => {
+                    selectColorAndImage(color, product.colors, setSelectedColor);
+                    setQuantity(1);
+                  }}
+                  getStock={(color) => selectedSize ? product.variants[`${selectedSize}_${color}`] || 0 : 0}
                   name="Couleur"
                 />
               </div>
