@@ -278,7 +278,8 @@ export async function getProductById(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, isMatchyMatchy, enfantSizes } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes } = req.body;
+    const isMatchyProduct = category === 'matchy_matchy';
 
     let parsedVariantStock = {};
     if (variantStock) {
@@ -361,15 +362,15 @@ export async function createProduct(req, res) {
         name,
         description,
         price,
-        isMatchyMatchy ? (enfantPrice || null) : null,
+        isMatchyProduct ? (enfantPrice || null) : null,
         category,
         totalStock,
         JSON.stringify(images),
         JSON.stringify(parsedSizes),
         JSON.stringify(parsedColors),
-        JSON.stringify(isMatchyMatchy ? parsedEnfantColors : []),
-        isMatchyMatchy ? 1 : 0,
-        JSON.stringify(isMatchyMatchy ? parsedEnfantSizes : []),
+        JSON.stringify(isMatchyProduct ? parsedEnfantColors : []),
+        isMatchyProduct ? 1 : 0,
+        JSON.stringify(isMatchyProduct ? parsedEnfantSizes : []),
       ]
     );
 
@@ -398,7 +399,8 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, isMatchyMatchy, enfantSizes } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes } = req.body;
+    const isMatchyProduct = category === 'matchy_matchy';
 
     const [products] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
     if (products.length === 0) {
@@ -521,15 +523,15 @@ export async function updateProduct(req, res) {
         name,
         description,
         price,
-        isMatchyMatchy ? (enfantPrice || null) : null,
+        isMatchyProduct ? (enfantPrice || null) : null,
         category,
         totalStock,
         JSON.stringify(existingImages),
         JSON.stringify(parsedSizes),
         JSON.stringify(parsedColors),
-        JSON.stringify(isMatchyMatchy ? parsedEnfantColors : []),
-        isMatchyMatchy ? 1 : 0,
-        JSON.stringify(isMatchyMatchy ? parsedEnfantSizes : []),
+        JSON.stringify(isMatchyProduct ? parsedEnfantColors : []),
+        isMatchyProduct ? 1 : 0,
+        JSON.stringify(isMatchyProduct ? parsedEnfantSizes : []),
         id,
       ]
     );
