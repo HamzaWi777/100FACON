@@ -23,6 +23,13 @@ function filterVariantStock(variantStock, sizes, colors, enfantSizes, enfantColo
   return Object.fromEntries(Object.entries(variantStock).filter(([key]) => validKeys.has(key)));
 }
 
+function isValidVariant(variant, sizes, colors, enfantSizes, enfantColors, isMatchyProduct) {
+  const isEnfantVariant = isMatchyProduct && variant.size?.startsWith('enfant_');
+  const validSizes = isEnfantVariant ? enfantSizes : sizes;
+  const validColors = isEnfantVariant ? enfantColors : colors;
+  return validSizes.includes(variant.size) && validColors.includes(variant.color);
+}
+
 export async function getAllProducts(req, res) {
   try {
     console.log('📥 Received query params:', req.query); // ADD THIS
@@ -169,15 +176,16 @@ export async function getAllProducts(req, res) {
     }
 
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [p.id]);
+    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, p.is_matchy_matchy === 1));
     const variantStock = {};
-    variants.forEach(v => {
+    validVariants.forEach(v => {
       const key = `${v.size || 'none'}_${v.color || 'none'}`;
       variantStock[key] = v.stock;
     });
 
     return {
       ...p,
-      stock: variants.reduce((sum, variant) => sum + (parseInt(variant.stock, 10) || 0), 0),
+      stock: Object.values(variantStock).reduce((sum, stock) => sum + (parseInt(stock, 10) || 0), 0),
       price: parseFloat(p.price),
       enfant_price: p.enfant_price ? parseFloat(p.enfant_price) : null,
       is_matchy_matchy: p.is_matchy_matchy ? p.is_matchy_matchy === 1 : false,
@@ -262,15 +270,16 @@ export async function getProductById(req, res) {
 
     // Fetch variants for this product
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [id]);
+    const validVariants = variants.filter(v => isValidVariant( v, sizes, colors, enfantSizes, enfantColors, product.is_matchy_matchy === 1));
     const variantStock = {};
-    variants.forEach(v => {
+    validVariants.forEach(v => {
       const key = `${v.size || 'none'}_${v.color || 'none'}`;
       variantStock[key] = v.stock;
     });
 
     res.json({
       ...product,
-      stock: variants.reduce((sum, variant) => sum + (parseInt(variant.stock, 10) || 0), 0),
+      stock: Object.values(variantStock).reduce((sum, stock) => sum + (parseInt(stock, 10) || 0), 0),
       price: parseFloat(product.price),
       enfant_price: product.enfant_price ? parseFloat(product.enfant_price) : null,
       is_matchy_matchy: product.is_matchy_matchy ? product.is_matchy_matchy === 1 : false,
