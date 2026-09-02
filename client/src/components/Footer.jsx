@@ -68,7 +68,7 @@ export function Footer() {
             </p>
             <div className="flex justify-center md:justify-end gap-4 text-gray-400">
               <a href="#" className="hover:text-purple-300 transition">Instagram</a>
-              <a href="#" className="hover:text-purple-300 transition">Facebook</a>
+              <a href="https://www.facebook.com/profile.php?id=61565881585728" className="hover:text-purple-300 transition">Facebook</a>
               <a href="#" className="hover:text-purple-300 transition">TikTok</a>
             </div>
           </div>
