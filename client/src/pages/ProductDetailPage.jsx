@@ -106,7 +106,7 @@ function MatchyMatchyForm({
           onClick={() => selectionMode !== 'enfant' && setSelectionMode('enfant')}
           className={`flex-1 py-2 rounded-lg font-semibold transition ${
             selectionMode === 'enfant'
-              ? 'bg-pink-600 text-white'
+              ? 'bg-purple-700 text-white'
               : 'text-gray-700 hover:bg-gray-200'
           }`}
         >
