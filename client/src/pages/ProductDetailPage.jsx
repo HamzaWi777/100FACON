@@ -81,6 +81,7 @@ function MatchyMatchyForm({
   enfantSize, setEnfantSize,
   enfantColor, setEnfantColor,
   enfantQty, setEnfantQty,
+  selectionMode,
 }) {
   const variants = product.variants || {};
   const colorDisplay = (color) => {
@@ -89,80 +90,120 @@ function MatchyMatchyForm({
   };
   return (
     <div className="space-y-6 mb-8">
-      {/* ── Adulte ── */}
-      <div>
-        <label className="block font-semibold mb-3 text-gray-900">Taille Adulte</label>
-        <div className="flex gap-2 flex-wrap">
-          {product.sizes.map(size => {
-            const sizeStock = Object.entries(variants).reduce(
-              (sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0
-            );
-            const oos = sizeStock === 0;
-            return (
-              <button
-                key={size}
-                onClick={() => setAdultSize(size)}
-                disabled={oos}
-                title={oos ? 'En rupture' : `${sizeStock} en stock`}
-                className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                  adultSize === size
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
-                    : oos
-                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-                    : 'border-purple-200 hover:border-purple-400 text-gray-900'
-                }`}
-              >
-                {size.replace('adult_', '')}{oos && <span className="text-xs ml-1">✕</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-semibold mb-3 text-gray-900">Couleur Adulte</label>
-        <select
-          value={adultColor}
-          onChange={(e) => setAdultColor(e.target.value)}
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium"
+      {/* Mode selector */}
+      <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+        <button
+          onClick={() => selectionMode !== 'adult' && setSelectionMode('adult')}
+          className={`flex-1 py-2 rounded-lg font-semibold transition ${
+            selectionMode === 'adult'
+              ? 'bg-pink-600 text-white'
+              : 'text-gray-700 hover:bg-gray-200'
+          }`}
         >
-          {product.colors.map(color => {
-            const colorStock = Object.entries(variants).reduce(
-              (sum, [key, stock]) => key.startsWith('adult_') && key.endsWith('_' + color) ? sum + stock : sum, 0
-            );
-            return (
-              <option key={color} value={color} disabled={colorStock === 0}>
-                {color} {colorStock === 0 ? '(Rupture)' : `(${colorStock} disponibles)`}
-              </option>
-            );
-          })}
-        </select>
+          Adulte
+        </button>
+        <button
+          onClick={() => selectionMode !== 'enfant' && setSelectionMode('enfant')}
+          className={`flex-1 py-2 rounded-lg font-semibold transition ${
+            selectionMode === 'enfant'
+              ? 'bg-pink-600 text-white'
+              : 'text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Enfant
+        </button>
+        <button
+          onClick={() => selectionMode !== 'both' && setSelectionMode('both')}
+          className={`flex-1 py-2 rounded-lg font-semibold transition ${
+            selectionMode === 'both'
+              ? 'bg-gradient-to-r from-pink-600 to-purple-700 text-white'
+              : 'text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Les deux
+        </button>
       </div>
 
-      <div>
-        <label className="block font-semibold mb-3 text-gray-900">Quantité (Adulte)</label>
-        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
-          <button onClick={() => setAdultQty(Math.max(1, adultQty - 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
-          <input
-            type="number"
-            value={adultQty}
-            onChange={(e) => setAdultQty(Math.max(1, parseInt(e.target.value) || 1))}
-            className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
-            min="1"
-            max={variants[`${adultSize}_${adultColor}`] || 1}
-          />
-          <button
-            onClick={() => {
-              const max = variants[`${adultSize}_${adultColor}`] || 1;
-              setAdultQty(Math.min(max, adultQty + 1));
-            }}
-            className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
-          >+</button>
+      {/* ── Adulte ── */}
+      {(selectionMode === 'adult' || selectionMode === 'both') && (
+      <>
+        <div>
+          <label className="block font-semibold mb-3 text-gray-900">Taille Adulte</label>
+          <div className="flex gap-2 flex-wrap">
+            {product.sizes.map(size => {
+              const sizeStock = Object.entries(variants).reduce(
+                (sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0
+              );
+              const oos = sizeStock === 0;
+              return (
+                <button
+                  key={size}
+                  onClick={() => setAdultSize(size)}
+                  disabled={oos}
+                  title={oos ? 'En rupture' : `${sizeStock} en stock`}
+                  className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
+                    adultSize === size
+                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
+                      : oos
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'border-purple-200 hover:border-purple-400 text-gray-900'
+                  }`}
+                >
+                  {size.replace('adult_', '')}{oos && <span className="text-xs ml-1">✕</span>}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+
+        <div>
+          <label className="block font-semibold mb-3 text-gray-900">Couleur Adulte</label>
+          <select
+            value={adultColor}
+            onChange={(e) => setAdultColor(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium"
+          >
+            {product.colors.map(color => {
+              const colorStock = Object.entries(variants).reduce(
+                (sum, [key, stock]) => key.startsWith('adult_') && key.endsWith('_' + color) ? sum + stock : sum, 0
+              );
+              return (
+                <option key={color} value={color} disabled={colorStock === 0}>
+                  {color} {colorStock === 0 ? '(Rupture)' : `(${colorStock} disponibles)`}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-semibold mb-3 text-gray-900">Quantité (Adulte)</label>
+          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
+            <button onClick={() => setAdultQty(Math.max(1, adultQty - 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
+            <input
+              type="number"
+              value={adultQty}
+              onChange={(e) => setAdultQty(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
+              min="1"
+              max={variants[`${adultSize}_${adultColor}`] || 1}
+            />
+            <button
+              onClick={() => {
+                const max = variants[`${adultSize}_${adultColor}`] || 1;
+                setAdultQty(Math.min(max, adultQty + 1));
+              }}
+              className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
+            >+</button>
+          </div>
+        </div>
+      </>)
+    }
 
       {/* ── Enfant ── */}
-      <div className="border-t border-purple-200 pt-4">
+      {(selectionMode === 'enfant' || selectionMode === 'both') && (
+      <>
+        <div className="border-t border-purple-200 pt-4">
         <label className="block font-semibold mb-3 text-gray-900">Taille Enfant</label>
         <div className="flex gap-2 flex-wrap">
           {(product.enfant_sizes || []).map(size => {
@@ -229,16 +270,18 @@ function MatchyMatchyForm({
               setEnfantQty(Math.min(max, enfantQty + 1));
             }}
             className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
-          >+</button>
+            >+</button>
+          </div>
         </div>
-      </div>
+      </>)
+    }
 
       {/* Variant stock status */}
       <div className="p-4 rounded-xl text-sm font-medium bg-green-50 border border-green-200 text-green-800">
-        {adultSize && adultColor && (
+        {(selectionMode === 'adult' || selectionMode === 'both') && adultSize && adultColor && (
           <div>✓ Adulte: taille {adultSize.replace('adult_', '')}, couleur {adultColor} — {variants[`${adultSize}_${adultColor}`] || 0} disponible(s)</div>
         )}
-        {enfantSize && enfantColor && (
+        {(selectionMode === 'enfant' || selectionMode === 'both') && enfantSize && enfantColor && (
           <div>✓ Enfant: taille {enfantSize.replace('enfant_', '')}, couleur {enfantColor} — {variants[`${enfantSize}_${enfantColor}`] || 0} disponible(s)</div>
         )}
       </div>
@@ -263,6 +306,7 @@ export function ProductDetailPage() {
   const [enfantSize, setEnfantSize] = useState('');
   const [enfantColor, setEnfantColor] = useState('');
   const [enfantQty, setEnfantQty] = useState(1);
+  const [selectionMode, setSelectionMode] = useState('both');
   const pageCarousel = useSwipeCarousel(product?.images?.length || 0);
   const lightboxCarousel = useSwipeCarousel(product?.images?.length || 0);
   const isMM = product?.is_matchy_matchy;
@@ -566,6 +610,7 @@ export function ProductDetailPage() {
               enfantSize={enfantSize} setEnfantSize={setEnfantSize}
               enfantColor={enfantColor} setEnfantColor={setEnfantColor}
               enfantQty={enfantQty} setEnfantQty={setEnfantQty}
+              selectionMode={selectionMode}
             />
           ) : (
           <div className="space-y-6 mb-8">
@@ -667,31 +712,31 @@ export function ProductDetailPage() {
 
           {/* Sticky CTA on mobile */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
-            {isMM ? (
-              <div className="grid grid-cols-3 gap-2">
+            {isMM ? (() => {
+              const adultAvailable = adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0;
+              const enfantAvailable = enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0;
+              let disabled = false;
+              let label = 'Acheter';
+              if (selectionMode === 'adult') {
+                disabled = !adultAvailable;
+                label = 'Acheter l\'adulte';
+              } else if (selectionMode === 'enfant') {
+                disabled = !enfantAvailable;
+                label = 'Acheter l\'enfant';
+              } else {
+                disabled = !adultAvailable && !enfantAvailable;
+                label = 'Acheter les deux';
+              }
+              return (
                 <button
-                  onClick={() => handleAddToCart('adult')}
-                  disabled={!(adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0)}
-                  className="bg-purple-600 text-white py-4 rounded-full hover:bg-pink-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
+                  onClick={() => handleAddToCart(selectionMode === 'both' ? 'both' : selectionMode)}
+                  disabled={disabled}
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
                 >
-                  Acheter l'adulte
+                  {label}
                 </button>
-                <button
-                  onClick={() => handleAddToCart('enfant')}
-                  disabled={!(enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0)}
-                  className="bg-pink-600 text-white py-4 rounded-full hover:bg-purple-700 transition disabled:opacity-50 font-bold text-sm shadow-lg"
-                >
-                  Acheter l'enfant
-                </button>
-                <button
-                  onClick={() => handleAddToCart('both')}
-                  disabled={!((adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0) || (enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0))}
-                  className="bg-gradient-to-r to-purple-700 from-pink-600 text-white py-4 rounded-full hover:brightness-110 transition disabled:opacity-50 font-bold text-sm shadow-lg"
-                >
-                  Les deux
-                </button>
-              </div>
-            ) : (
+              );
+            })() : (
               <button
                 onClick={() => handleAddToCart('single')}
                 disabled={currentVariantStock === 0}
