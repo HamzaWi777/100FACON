@@ -116,11 +116,11 @@ export function CartPage() {
                       />
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base sm:text-lg text-gray-900 break-words">{item.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        Taille : {item.size} | Couleur : {item.color}
-                      </p>
+                     <div className="flex-1 min-w-0">
+                       <h3 className="font-semibold text-base sm:text-lg text-gray-900 break-words">{item.name} <span className="text-xs text-gray-500 font-normal">({item.size?.startsWith('adult_') ? 'Adulte' : item.size?.startsWith('enfant_') ? 'Enfant' : 'Unique'})</span></h3>
+                       <p className="text-sm text-gray-600">
+                         Taille : {item.size?.replace(/^adult_|^enfant_/, '') || '-'} | Couleur : {item.color}
+                       </p>
                       <p className="text-base sm:text-lg font-bold text-purple-600 mt-2">
                         TND {(typeof item.price === 'string' ? parseFloat(item.price) : item.price).toFixed(2)}
                       </p>

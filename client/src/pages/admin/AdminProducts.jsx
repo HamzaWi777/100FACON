@@ -4,16 +4,20 @@ import { productService } from '../../services';
 
 const DEFAULT_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52'];
 const ENFANTS_SIZES = ['6', '8', '10', '12', '14'];
+const ADULT_SIZE_PREFIX = 'adult_';
+const ENFANT_SIZE_PREFIX = 'enfant_';
 
 const sizesForCategory = (category) =>
   category === 'enfants' ? ENFANTS_SIZES : DEFAULT_SIZES;
+
+const prefixedSizes = (prefix, sizes) => sizes.map(s => `${prefix}${s}`);
 
 export function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: 'men', colors: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', category: 'men', colors: '', isMatchyMatchy: false });
   const [variantStock, setVariantStock] = useState({});
   const [images, setImages] = useState([]);
 
@@ -75,7 +79,12 @@ export function AdminProducts() {
     fd.append('price', formData.price);
     fd.append('category', formData.category);
     fd.append('colors', JSON.stringify(colors));
-    fd.append('sizes', JSON.stringify(sizesForCategory(formData.category)));
+    const isMatchy = formData.category === 'matchy_matchy' || formData.isMatchyMatchy;
+    const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
+    const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
+    fd.append('isMatchyMatchy', isMatchy);
+    fd.append('sizes', JSON.stringify(isMatchy ? adultSizes : sizesForCategory(formData.category)));
+    fd.append('enfantSizes', JSON.stringify(isMatchy ? enfantSizes : []));
     fd.append('variantStock', JSON.stringify(variantStock));
     images.forEach((image) => fd.append('images', image.file));
     try {
@@ -95,7 +104,12 @@ export function AdminProducts() {
 
   const handleEdit = (product) => {
     setEditingId(product.id);
-    setFormData({ name: product.name, description: product.description, price: product.price, category: product.category, colors: product.colors.join(', ') });
+    const isMatchy = product.is_matchy_matchy || product.category === 'matchy_matchy';
+    setFormData({
+      name: product.name, description: product.description, price: product.price,
+      category: product.category, colors: product.colors.join(', '),
+      isMatchyMatchy: isMatchy,
+    });
     setVariantStock(product.variants || {});
     setImages([]);
     setShowForm(true);
@@ -115,7 +129,7 @@ export function AdminProducts() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', price: '', category: 'men', colors: '' });
+    setFormData({ name: '', description: '', price: '', category: 'men', colors: '', isMatchyMatchy: false });
     setVariantStock({});
     setImages([]);
     setEditingId(null);
@@ -124,7 +138,10 @@ export function AdminProducts() {
 
   const colors = formData.colors.split(',').map(c => c.trim()).filter(c => c);
   const displayColors = colors.length > 0 ? colors : ['No Color'];
-  const activeSizes = sizesForCategory(formData.category);
+  const isMM = formData.category === 'matchy_matchy';
+  const adultActiveSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
+  const enfantActiveSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
+  const activeSizes = isMM ? adultActiveSizes : sizesForCategory(formData.category);
 
   return (
     <div>
@@ -156,9 +173,9 @@ export function AdminProducts() {
                 <label className="block text-sm font-medium text-gray-900 mb-2">Catégorie</label>
                 <select name="category" value={formData.category} onChange={handleInputChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                  {['men', 'women', 'accessories', 'shoes', 'enfants'].map(c => (
-                    <option key={c} value={c}>{c === 'men' ? 'Hommes' : c === 'women' ? 'Femmes' : c === 'accessories' ? 'Accessoires' : c === 'shoes' ? 'Chaussures' : 'Enfants'}</option>
-                  ))}
+                   {['men', 'women', 'accessories', 'shoes', 'enfants', 'matchy_matchy'].map(c => (
+                     <option key={c} value={c}>{c === 'men' ? 'Hommes' : c === 'women' ? 'Femmes' : c === 'accessories' ? 'Accessoires' : c === 'shoes' ? 'Chaussures' : c === 'enfants' ? 'Enfants' : c === 'matchy_matchy' ? 'Matchy Matchy' : 'Enfants'}</option>
+                   ))}
                 </select>
               </div>
             </div>
@@ -186,35 +203,105 @@ export function AdminProducts() {
 
             {/* Variant stock — horizontal scroll on mobile */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-3">Stock par taille et couleur</label>
-              <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
-                <table className="w-full min-w-max">
-                  <thead>
-                    <tr className="bg-purple-100 border-b-2 border-purple-200">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille</th>
-                      {displayColors.map(color => (
-                        <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeSizes.map(size => (
-                      <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
-                        <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size}</td>
-                        {displayColors.map(color => (
-                          <td key={`${size}-${color}`} className="px-4 py-2">
-                            <input type="number" min="0"
-                              value={variantStock[`${size}_${color}`] || ''}
-                              onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
-                              placeholder="0"
-                              className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
-                          </td>
+              {isMM ? (
+                <>
+                  <div className="mb-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-3">Stock adulte par taille et couleur</label>
+                    <div className="overflow-x-auto border-2 border-purple-200 rounded-lg mb-4">
+                      <table className="w-full min-w-max">
+                        <thead>
+                          <tr className="bg-purple-100 border-b-2 border-purple-200">
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille (Adulte)</th>
+                            {displayColors.map(color => (
+                              <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adultActiveSizes.map(size => (
+                            <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
+                              <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size.replace(ADULT_SIZE_PREFIX, '')}</td>
+                              {displayColors.map(color => (
+                                <td key={`${size}-${color}`} className="px-4 py-2">
+                                  <input type="number" min="0"
+                                    value={variantStock[`${size}_${color}`] || ''}
+                                    onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
+                                    placeholder="0"
+                                    className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-3">Stock enfant par taille et couleur</label>
+                    <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
+                      <table className="w-full min-w-max">
+                        <thead>
+                          <tr className="bg-pink-100 border-b-2 border-purple-200">
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-pink-100">Taille (Enfant)</th>
+                            {displayColors.map(color => (
+                              <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {enfantActiveSizes.map(size => (
+                            <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
+                              <td className="px-4 py-2 font-medium text-sm bg-pink-50 sticky left-0">{size.replace(ENFANT_SIZE_PREFIX, '')}</td>
+                              {displayColors.map(color => (
+                                <td key={`${size}-${color}`} className="px-4 py-2">
+                                  <input type="number" min="0"
+                                    value={variantStock[`${size}_${color}`] || ''}
+                                    onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
+                                    placeholder="0"
+                                    className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-gray-900 mb-3">Stock par taille et couleur</label>
+                  <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
+                    <table className="w-full min-w-max">
+                      <thead>
+                        <tr className="bg-purple-100 border-b-2 border-purple-200">
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille</th>
+                          {displayColors.map(color => (
+                            <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeSizes.map(size => (
+                          <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
+                            <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size}</td>
+                            {displayColors.map(color => (
+                              <td key={`${size}-${color}`} className="px-4 py-2">
+                                <input type="number" min="0"
+                                  value={variantStock[`${size}_${color}`] || ''}
+                                  onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
+                                  placeholder="0"
+                                  className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                              </td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Images */}

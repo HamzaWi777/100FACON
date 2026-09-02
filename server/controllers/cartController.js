@@ -48,7 +48,6 @@ export async function addToCart(req, res) {
     const userId = req.user.id;
     const { product_id, quantity, size, color } = req.body;
 
-    // Check if product exists and has stock
     const [products] = await pool.query('SELECT stock FROM products WHERE id = ?', [product_id]);
     if (products.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
@@ -56,6 +55,18 @@ export async function addToCart(req, res) {
 
     if (products[0].stock < quantity) {
       return res.status(400).json({ error: 'Insufficient stock' });
+    }
+
+    // Variant-level stock check (critical for matchy_matchy products
+    // where adult_36 and enfant_12 variants have independent stock)
+    if (size && color) {
+      const [variantResult] = await pool.query(
+        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
+        [product_id, size, color]
+      );
+      if (variantResult[0] && variantResult[0].stock < quantity) {
+        return res.status(400).json({ error: 'Insufficient variant stock' });
+      }
     }
 
     // Check if item already in cart
@@ -98,9 +109,10 @@ export async function updateCartItem(req, res) {
       return res.status(400).json({ error: 'Quantity must be at least 1' });
     }
 
-    // Check if cart item exists and belongs to user
     const [cartItems] = await pool.query(
-      'SELECT c.*, p.stock FROM cart c JOIN products p ON c.product_id = p.id WHERE c.id = ? AND c.user_id = ?',
+      `SELECT c.*, p.stock,
+       (SELECT stock FROM product_variants pv WHERE pv.product_id = p.id AND pv.size = c.size AND pv.color = c.color) as variant_stock
+       FROM cart c JOIN products p ON c.product_id = p.id WHERE c.id = ? AND c.user_id = ?`,
       [id, userId]
     );
 
@@ -108,7 +120,8 @@ export async function updateCartItem(req, res) {
       return res.status(404).json({ error: 'Cart item not found' });
     }
 
-    if (cartItems[0].stock < quantity) {
+    const availableStock = cartItems[0].variant_stock != null ? cartItems[0].variant_stock : cartItems[0].stock;
+    if (availableStock < quantity) {
       return res.status(400).json({ error: 'Insufficient stock' });
     }
 

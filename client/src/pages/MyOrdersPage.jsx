@@ -162,10 +162,15 @@ function MyOrdersPageContent() {
                             className="w-20 h-20 object-cover rounded-lg"
                           />
                         )}
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900">{item.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {item.size} | {item.color} | Qté: {item.quantity}
+                         <div className="flex-1">
+                           <p className="font-semibold text-gray-900">
+                             {item.name}
+                             <span className="text-xs text-gray-500 font-normal ml-1">
+                               ({item.size?.startsWith('adult_') ? 'Adulte' : item.size?.startsWith('enfant_') ? 'Enfant' : 'Unique'})
+                             </span>
+                           </p>
+                           <p className="text-sm text-gray-600">
+                             {item.size?.replace(/^adult_|^enfant_/, '') || '-'} | {item.color} | Qté: {item.quantity}
                           </p>
                         </div>
                         <div className="text-right">

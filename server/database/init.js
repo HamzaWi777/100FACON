@@ -13,16 +13,18 @@ export async function initializeDatabase() {
     const __dirname = dirname(__filename);
     const schemaPath = join(__dirname, 'schema.sql');
     
-    // Read and execute schema
+    // Execute schema
     const schema = readFileSync(schemaPath, 'utf-8');
-    
-    // Split by ; and execute each statement
     const statements = schema.split(';').filter(stmt => stmt.trim());
     for (const statement of statements) {
       if (statement.trim()) {
         await connection.execute(statement);
       }
     }
+
+    // Idempotent migrations for new columns
+    await connection.execute('ALTER TABLE products ADD COLUMN IF NOT EXISTS is_matchy_matchy TINYINT(1) DEFAULT 0');
+    await connection.execute('ALTER TABLE products ADD COLUMN IF NOT EXISTS enfant_sizes JSON');
 
     // Seed admin user
     const hashedPassword = await bcrypt.hash('admin123', 10);

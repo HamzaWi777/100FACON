@@ -22,11 +22,23 @@ CREATE TABLE IF NOT EXISTS products (
   images JSON,
   sizes JSON,
   colors JSON,
+  is_matchy_matchy TINYINT(1) DEFAULT 0,
+  enfant_sizes JSON,
   is_featured BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_category (category),
   INDEX idx_is_featured (is_featured),
   INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  size VARCHAR(20),
+  color VARCHAR(50),
+  stock INT DEFAULT 0,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  INDEX idx_product_id (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS orders (
