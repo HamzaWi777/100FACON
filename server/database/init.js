@@ -23,8 +23,17 @@ export async function initializeDatabase() {
     }
 
     // Idempotent migrations for new columns
-    await connection.execute('ALTER TABLE products ADD COLUMN IF NOT EXISTS is_matchy_matchy TINYINT(1) DEFAULT 0');
-    await connection.execute('ALTER TABLE products ADD COLUMN IF NOT EXISTS enfant_sizes JSON');
+    const migrations = [
+      'ALTER TABLE products ADD COLUMN is_matchy_matchy TINYINT(1) DEFAULT 0',
+      'ALTER TABLE products ADD COLUMN enfant_sizes JSON',
+    ];
+    for (const migration of migrations) {
+      try {
+        await connection.execute(migration);
+      } catch (err) {
+        console.log('Migration note:', err.sqlMessage || err.message);
+      }
+    }
 
     // Seed admin user
     const hashedPassword = await bcrypt.hash('admin123', 10);
