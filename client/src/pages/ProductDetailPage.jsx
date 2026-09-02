@@ -345,8 +345,13 @@ export function ProductDetailPage() {
   };
 
    useEffect(() => {
-     if (product?.images?.length) preloadImages(product.images);
-   }, [product]);
+     if (!product?.images?.length) return;
+     const len = product.images.length;
+     const neighbors = [
+       product.images[(pageCarousel.index + 1) % len],
+     ];
+     preloadImages(neighbors, (image) => imgSrc(image, { width: 1200 }));
+   }, [product, pageCarousel.index]);
 
    const handleAddToCart = async (mode = 'single') => {
     if (isMM) {
@@ -505,13 +510,15 @@ export function ProductDetailPage() {
                    {product.images.map((img, idx) => (
                      <div key={idx} className="w-full flex-shrink-0">
                        <img
-                         src={imgSrc(img)}
+                         src={imgSrc(img, { width: 1200 })}
                          alt={`${product.name} - image ${idx + 1}`}
                          onClick={() => {
                            if (pageCarousel.swiped.current) { pageCarousel.swiped.current = false; return; }
                            openLightbox(idx);
                          }}
                          loading={idx === pageCarousel.index ? 'eager' : 'lazy'}
+                         fetchPriority={idx === pageCarousel.index ? 'high' : 'low'}
+                         sizes="(max-width: 767px) 100vw, 50vw"
                          decoding="async"
                          className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover cursor-zoom-in select-none"
                          draggable={false}
@@ -549,7 +556,7 @@ export function ProductDetailPage() {
                    {product.images.map((img, idx) => (
                      <img
                        key={idx}
-                       src={imgSrc(img)}
+                       src={imgSrc(img, { width: 180 })}
                        alt={`thumbnail-${idx}`}
                        loading="lazy"
                        decoding="async"
@@ -819,10 +826,12 @@ export function ProductDetailPage() {
               {product.images.map((img, idx) => (
                 <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center px-2">
                    <img
-                     src={imgSrc(img)}
+                     src={imgSrc(img, { width: 1600 })}
                      alt={`${product.name} - image ${idx + 1}`}
                      onClick={(e) => e.stopPropagation()}
                      loading={idx === lightboxCarousel.index ? 'eager' : 'lazy'}
+                     fetchPriority={idx === lightboxCarousel.index ? 'high' : 'low'}
+                     sizes="90vw"
                      decoding="async"
                     className="max-w-[92vw] max-h-[82vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain select-none cursor-default"
                   />

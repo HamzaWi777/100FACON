@@ -118,10 +118,11 @@ export function HomePage() {
                   <div className="relative overflow-hidden bg-gray-100 h-48 sm:h-64 md:h-96">
                     {product.images[0] && (
                       <img
-                        src={imgSrc(product.images[0])}
+                        src={imgSrc(product.images[0], { width: 640 })}
                         alt={product.name}
                         loading="lazy"
                         decoding="async"
+                        sizes="(max-width: 767px) 50vw, 33vw"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                     )}
