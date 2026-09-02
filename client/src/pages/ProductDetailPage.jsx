@@ -176,18 +176,20 @@ export function ProductDetailPage() {
                   onTouchMove={pageCarousel.onTouchMove}
                   onTouchEnd={pageCarousel.onTouchEnd}
                 >
-                  {product.images.map((img, idx) => (
-                    <div key={idx} className="w-full flex-shrink-0">
-                      <img
-                        src={imgSrc(img)}
-                        alt={`${product.name} - image ${idx + 1}`}
-                        onClick={() => {
-                          if (pageCarousel.swiped.current) { pageCarousel.swiped.current = false; return; }
-                          openLightbox(idx);
-                        }}
-                        className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover cursor-zoom-in select-none"
-                        draggable={false}
-                      />
+                   {product.images.map((img, idx) => (
+                     <div key={idx} className="w-full flex-shrink-0">
+                       <img
+                         src={imgSrc(img)}
+                         alt={`${product.name} - image ${idx + 1}`}
+                         onClick={() => {
+                           if (pageCarousel.swiped.current) { pageCarousel.swiped.current = false; return; }
+                           openLightbox(idx);
+                         }}
+                         loading={idx === pageCarousel.index ? 'eager' : 'lazy'}
+                         decoding="async"
+                         className="w-full h-72 sm:h-[480px] md:h-[600px] object-cover cursor-zoom-in select-none"
+                         draggable={false}
+                       />
                     </div>
                   ))}
                 </div>
@@ -218,12 +220,14 @@ export function ProductDetailPage() {
               {/* Thumbnails — horizontal scroll on mobile */}
               {product.images.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {product.images.map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={imgSrc(img)}
-                      alt={`thumbnail-${idx}`}
-                      onClick={() => pageCarousel.setIndex(idx)}
+                   {product.images.map((img, idx) => (
+                     <img
+                       key={idx}
+                       src={imgSrc(img)}
+                       alt={`thumbnail-${idx}`}
+                       loading="lazy"
+                       decoding="async"
+                       onClick={() => pageCarousel.setIndex(idx)}
                       className={`w-16 h-20 md:w-20 md:h-28 object-cover rounded-lg cursor-pointer border-2 flex-shrink-0 transition ${
                         pageCarousel.index === idx ? 'border-purple-600' : 'border-gray-300 hover:border-purple-300'
                       }`}
@@ -435,13 +439,12 @@ export function ProductDetailPage() {
             >
               {product.images.map((img, idx) => (
                 <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center px-2">
-                  <img
-                    src={imgSrc(img)}
-                    alt={`${product.name} - image ${idx + 1}`}
-                    onClick={(e) => e.stopPropagation()}
-                    draggable={false}
-                    loading="eager"
-                    decoding="async"
+                   <img
+                     src={imgSrc(img)}
+                     alt={`${product.name} - image ${idx + 1}`}
+                     onClick={(e) => e.stopPropagation()}
+                     loading={idx === lightboxCarousel.index ? 'eager' : 'lazy'}
+                     decoding="async"
                     className="max-w-[92vw] max-h-[82vh] sm:max-w-[90vw] sm:max-h-[90vh] object-contain select-none cursor-default"
                   />
                 </div>
