@@ -840,6 +840,7 @@ export function ProductDetailPage() {
             {selectionRows.map((row, rowIndex) => (
               <div key={rowIndex} className="rounded-xl border border-purple-100 p-4">
                 <p className="mb-3 text-sm font-semibold text-gray-900">Article {rowIndex + 1}</p>
+                <label className="mb-2 block text-sm font-semibold text-gray-900">Taille</label>
                 <div className="mb-4 flex flex-wrap gap-2">
                   {product.sizes?.map(size => {
                     const sizeStock = Object.entries(product.variants || {}).reduce(
@@ -861,6 +862,7 @@ export function ProductDetailPage() {
                     );
                   })}
                 </div>
+                <label className="mb-2 block text-sm font-semibold text-gray-900">Couleur</label>
                 <ColorSwatches
                   colors={product.colors || []}
                   value={row.color}
