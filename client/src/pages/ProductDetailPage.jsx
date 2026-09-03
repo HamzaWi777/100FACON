@@ -141,7 +141,7 @@ function MatchyMatchyForm({
                   key={size}
                   onClick={() => setAdultSize(size)}
                   disabled={oos}
-                  title={oos ? 'En rupture' : `en stock`}
+                  title={oos ? 'En rupture' : `${sizeStock} en stock`}
                   className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
                     adultSize === size
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
@@ -689,7 +689,7 @@ export function ProductDetailPage() {
               </span>
             )}
             <span className={`inline-flex text-xs md:text-sm font-semibold ${product.stock > 0 ? 'text-green-600 bg-green-50 px-3 py-1 rounded-full' : 'text-red-600 bg-red-50 px-3 py-1 rounded-full'}`}>
-              {product.stock > 0 ? `${product.stock} en stock` : 'Rupture de stock'}
+              {product.stock > 0 ? `en stock` : 'Rupture de stock'}
             </span>
           </div>
 
