@@ -355,14 +355,18 @@ export function ProductDetailPage() {
         return;
       }
       try {
-        for (const item of itemsToAdd) {
-          const itemPrice = item.label === 'adulte' ? product.price : (product.enfant_price || product.price);
-          if (isAuthenticated) {
-            await cartService.addToCart({ product_id: product.id, quantity: item.quantity, size: item.size, color: item.color, price: itemPrice });
-          } else {
-            getOrCreateGuestSessionId();
-            addToGuestCart(product, item.quantity, item.size, item.color, itemPrice);
-          }
+        const cartItems = itemsToAdd.map((item) => ({
+          product_id: product.id,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          price: item.label === 'adulte' ? product.price : (product.enfant_price || product.price),
+        }));
+        if (isAuthenticated) {
+          await cartService.addItemsToCart(cartItems);
+        } else {
+          getOrCreateGuestSessionId();
+          cartItems.forEach((item) => addToGuestCart(product, item.quantity, item.size, item.color, item.price));
         }
         trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: itemsToAdd.reduce((s, i) => s + i.quantity, 0) });
         toast.success('Article(s) ajouté(s) au panier');
@@ -383,13 +387,17 @@ export function ProductDetailPage() {
       return;
     }
     try {
-      for (const row of selectionRows) {
-        if (isAuthenticated) {
-          await cartService.addToCart({ product_id: product.id, quantity: 1, size: row.size, color: row.color });
-        } else {
-          getOrCreateGuestSessionId();
-          addToGuestCart(product, 1, row.size, row.color);
-        }
+      const cartItems = selectionRows.map((row) => ({
+        product_id: product.id,
+        quantity: 1,
+        size: row.size,
+        color: row.color,
+      }));
+      if (isAuthenticated) {
+        await cartService.addItemsToCart(cartItems);
+      } else {
+        getOrCreateGuestSessionId();
+        cartItems.forEach((item) => addToGuestCart(product, 1, item.size, item.color));
       }
       trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: selectionRows.length });
       toast.success('Added to cart');

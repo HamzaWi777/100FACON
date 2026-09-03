@@ -21,6 +21,7 @@ export const productService = {
 export const cartService = {
   getCart: () => api.get('/cart'),
   addToCart: (data) => api.post('/cart', data),
+  addItemsToCart: (items) => api.post('/cart/bulk', { items }),
   updateCartItem: (id, data) => api.put(`/cart/${id}`, data),
   removeFromCart: (id) => api.delete(`/cart/${id}`),
 };
