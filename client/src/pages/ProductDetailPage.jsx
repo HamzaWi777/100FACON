@@ -102,7 +102,7 @@ function MatchyMatchyForm({
     return `${color} ${adultStock === 0 ? '(Rupture)' : `(${adultStock} disponibles)`}`;
   };
   return (
-    <div className="space-y-6 mb-8">
+    <div className="space-y-4 mb-5">
       {/* Mode selector */}
       <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
         <button
@@ -587,7 +587,7 @@ export function ProductDetailPage() {
 
   const renderImmediateOrderForm = () => (
     <div className="mt-6 border-t border-purple-200 pt-5">
-      <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-4 md:p-5">
+          <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-4 md:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="font-serif text-xl font-bold text-gray-900">Commander maintenant</h2>
           <span className="text-xs font-semibold uppercase tracking-wide text-purple-600">Livraison à domicile</span>
@@ -687,7 +687,7 @@ export function ProductDetailPage() {
   if (!product) return <div className="flex items-center justify-center min-h-screen text-gray-600">Produit non trouvé</div>;
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8">
+    <div className="container mx-auto px-4 py-4 md:py-6">
       <button
         onClick={() => navigate('/products')}
         className="text-purple-600 hover:text-purple-700 mb-4 md:mb-6 flex items-center gap-1 text-sm md:text-base font-medium transition"
@@ -695,7 +695,7 @@ export function ProductDetailPage() {
         ← Retour à la collection
       </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
 
         {/* ── Image Gallery ── */}
         <div>
@@ -777,6 +777,12 @@ export function ProductDetailPage() {
               Pas d'image disponible
             </div>
           )}
+          <div className="mt-5 border-t border-purple-200 pt-4">
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-700">Description</h2>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-600 md:text-base">
+              {product.description}
+            </p>
+          </div>
         </div>
 
         {/* ── Product Info ── */}
@@ -784,12 +790,9 @@ export function ProductDetailPage() {
           <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3 md:mb-4 text-gray-900">
             {product.name}
           </h1>
-          <p className="text-gray-600 mb-6 md:mb-8 whitespace-pre-wrap text-sm md:text-base leading-relaxed">
-            {product.description}
-          </p>
 
           {/* Price + stock */}
-          <div className="mb-8 md:mb-10 pb-6 border-b border-purple-200">
+          <div className="mb-5 md:mb-6 pb-4 border-b border-purple-200">
             {isMM && product.enfant_price ? (
               <div className="flex items-end gap-6 mb-4">
                 <div>
@@ -824,7 +827,7 @@ export function ProductDetailPage() {
               setSelectionMode={setSelectionMode}
             />
           ) : (
-          <div className="space-y-6 mb-8">
+          <div className="space-y-4 mb-5">
 
             {selectionRows.map((row, rowIndex) => (
               <div key={rowIndex} className="rounded-xl border border-purple-100 p-4">
