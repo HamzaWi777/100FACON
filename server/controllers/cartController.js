@@ -58,8 +58,9 @@ export async function addToCart(req, res) {
 
     // Variant-level stock check (critical for matchy_matchy products
     // where adult_36 and enfant_12 variants have independent stock)
+    let variantResult = [];
     if (size && color) {
-      const [variantResult] = await pool.query(
+      [variantResult] = await pool.query(
         'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
         [product_id, size, color]
       );
@@ -79,6 +80,9 @@ export async function addToCart(req, res) {
       const newQuantity = existingItems[0].quantity + quantity;
       if (products[0].stock < newQuantity) {
         return res.status(400).json({ error: 'Insufficient stock' });
+      }
+      if (size && color && variantResult[0] && variantResult[0].stock < newQuantity) {
+        return res.status(400).json({ error: 'Insufficient variant stock' });
       }
       await pool.query(
         'UPDATE cart SET quantity = ? WHERE id = ?',

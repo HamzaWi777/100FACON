@@ -40,6 +40,24 @@ export async function createOrder(req, res) {
       return res.status(400).json({ error: 'Cart is empty' });
     }
 
+    const requestedVariants = cartItems.reduce((requested, item) => {
+      if (item.size && item.color) {
+        const key = `${item.product_id}:${item.size}:${item.color}`;
+        requested[key] = (requested[key] || 0) + item.quantity;
+      }
+      return requested;
+    }, {});
+    for (const [key, requestedQuantity] of Object.entries(requestedVariants)) {
+      const [productId, size, color] = key.split(':');
+      const [variant] = await pool.query(
+        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
+        [productId, size, color]
+      );
+      if (!variant[0] || variant[0].stock < requestedQuantity) {
+        return res.status(400).json({ error: 'Insufficient variant stock' });
+      }
+    }
+
     // Calculate total
     const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
