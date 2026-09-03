@@ -100,6 +100,65 @@ export async function addToCart(req, res) {
   }
 }
 
+export async function addItemsToCart(req, res) {
+  const connection = await pool.getConnection();
+  try {
+    const userId = req.user.id;
+    const { items } = req.body;
+    if (!Array.isArray(items) || items.length === 0 || items.some(item => (
+      !item.product_id || !Number.isInteger(item.quantity) || item.quantity < 1 || !item.size || !item.color
+    ))) {
+      return res.status(400).json({ error: 'Invalid cart items' });
+    }
+
+    const requested = items.reduce((counts, item) => {
+      const key = `${item.product_id}:${item.size}:${item.color}`;
+      counts[key] = (counts[key] || 0) + item.quantity;
+      return counts;
+    }, {});
+
+    await connection.beginTransaction();
+    for (const [key, requestedQuantity] of Object.entries(requested)) {
+      const [productId, size, color] = key.split(':');
+      const [variants] = await connection.query(
+        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? FOR UPDATE',
+        [productId, size, color]
+      );
+      const [cartQuantity] = await connection.query(
+        'SELECT COALESCE(SUM(quantity), 0) AS quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? FOR UPDATE',
+        [userId, productId, size, color]
+      );
+      const currentQuantity = Number(cartQuantity[0]?.quantity || 0);
+      if (!variants[0] || variants[0].stock < currentQuantity + requestedQuantity) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Insufficient variant stock' });
+      }
+    }
+
+    for (const item of items) {
+      const [existing] = await connection.query(
+        'SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? FOR UPDATE',
+        [userId, item.product_id, item.size, item.color]
+      );
+      if (existing.length > 0) {
+        await connection.query('UPDATE cart SET quantity = ?, price = COALESCE(?, price) WHERE id = ?', [existing[0].quantity + item.quantity, item.price || null, existing[0].id]);
+      } else {
+        await connection.query(
+          'INSERT INTO cart (user_id, product_id, quantity, size, color, price) VALUES (?, ?, ?, ?, ?, ?)',
+          [userId, item.product_id, item.quantity, item.size, item.color, item.price || null]
+        );
+      }
+    }
+    await connection.commit();
+    res.status(201).json({ message: 'Items added to cart' });
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
+  }
+}
+
 export async function updateCartItem(req, res) {
   try {
     const userId = req.user.id;
