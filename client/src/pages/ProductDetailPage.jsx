@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { productService, cartService } from '../services';
 import { useAuth } from '../context/AuthContext';
+import { orderService } from '../services';
+import { governorates } from '../constants/governorates';
 import { addToGuestCart, getOrCreateGuestSessionId } from '../utils/guestCart';
-import { trackViewContent, trackAddToCart } from '../utils/metaPixel';
+import { trackViewContent, trackInitiateCheckout, trackPurchase } from '../utils/metaPixel';
 import { imgSrc, preloadImages } from '../utils/imgSrc';
 import { ColorSwatches } from '../components/ColorSwatches';
 
@@ -275,7 +277,7 @@ function MatchyMatchyForm({
 export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedSize, setSelectedSize] = useState('');
@@ -290,6 +292,11 @@ export function ProductDetailPage() {
   const [enfantColor, setEnfantColor] = useState('');
   const [enfantQty, setEnfantQty] = useState(1);
   const [selectionMode, setSelectionMode] = useState('both');
+  const [immediateOrderOpen, setImmediateOrderOpen] = useState(false);
+  const [immediateOrderSubmitting, setImmediateOrderSubmitting] = useState(false);
+  const [immediateOrderForm, setImmediateOrderForm] = useState({
+    full_name: '', email: '', phone: '', shipping_address: '', wilaya: '', notes: '',
+  });
   const pageCarousel = useSwipeCarousel(product?.images?.length || 0);
   const lightboxCarousel = useSwipeCarousel(product?.images?.length || 0);
   const carouselSyncSource = useRef(null);
@@ -423,6 +430,17 @@ export function ProductDetailPage() {
 
   const currentVariantStock = product ? getVariantStock() : 0;
 
+  useEffect(() => {
+    if (!user) return;
+    setImmediateOrderForm((current) => ({
+      ...current,
+      full_name: user.full_name || current.full_name,
+      phone: user.phone || current.phone,
+      shipping_address: user.address || current.shipping_address,
+      wilaya: user.wilaya || current.wilaya,
+    }));
+  }, [user]);
+
   const imageIndexForColor = (colors, color) => {
     const index = colors.indexOf(color);
     return index >= 0 && index < (product?.images?.length || 0) ? index : -1;
@@ -510,6 +528,65 @@ export function ProductDetailPage() {
         {currentVariantStock === 0 ? 'Rupture de stock' : 'Acheter'}
       </button>
     );
+  };
+
+  const getImmediateOrderItems = () => {
+    if (isMM) {
+      const selections = [];
+      if (selectionMode === 'adult' || selectionMode === 'both') {
+        if (!adultSize || !adultColor || !(product.variants?.[`${adultSize}_${adultColor}`] > 0)) return null;
+        selections.push({ product_id: product.id, quantity: adultQty, size: adultSize, color: adultColor, price: product.price });
+      }
+      if (selectionMode === 'enfant' || selectionMode === 'both') {
+        if (!enfantSize || !enfantColor || !(product.variants?.[`${enfantSize}_${enfantColor}`] > 0)) return null;
+        selections.push({ product_id: product.id, quantity: enfantQty, size: enfantSize, color: enfantColor, price: product.enfant_price || product.price });
+      }
+      return selections.length ? selections : null;
+    }
+    if (!selectedSize || !selectedColor || currentVariantStock <= 0) return null;
+    return [{ product_id: product.id, quantity, size: selectedSize, color: selectedColor, price: product.price }];
+  };
+
+  const immediateOrderItems = getImmediateOrderItems();
+  const immediateSubtotal = immediateOrderItems?.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0;
+  const handleImmediateOrderChange = (event) => {
+    setImmediateOrderForm({ ...immediateOrderForm, [event.target.name]: event.target.value });
+  };
+
+  const handleImmediateOrderSubmit = async (event) => {
+    event.preventDefault();
+    if (!immediateOrderItems) {
+      toast.error('Veuillez sélectionner une combinaison disponible');
+      return;
+    }
+    setImmediateOrderSubmitting(true);
+    try {
+      trackInitiateCheckout({
+        value: immediateSubtotal + 8,
+        currency: 'TND',
+        contentIds: [product.id],
+        numItems: immediateOrderItems.reduce((sum, item) => sum + item.quantity, 0),
+      });
+      const response = await orderService.createOrder({
+        ...immediateOrderForm,
+        guest_name: isAuthenticated ? undefined : immediateOrderForm.full_name,
+        guest_email: isAuthenticated ? undefined : immediateOrderForm.email,
+        directItems: immediateOrderItems,
+      });
+      trackPurchase({
+        orderId: response.data.orderId,
+        value: response.data.totalPrice + 8,
+        currency: 'TND',
+        contentIds: [product.id],
+        numItems: immediateOrderItems.reduce((sum, item) => sum + item.quantity, 0),
+      });
+      toast.success('Commande confirmée avec succès');
+      setImmediateOrderOpen(false);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Impossible de confirmer la commande');
+    } finally {
+      setImmediateOrderSubmitting(false);
+    }
   };
 
 
@@ -805,6 +882,48 @@ export function ProductDetailPage() {
       </div>
 
       {/* Purchase CTA at the end of the product content */}
+      <div className="mt-8 border-t border-purple-200 pt-6">
+        <button
+          type="button"
+          onClick={() => setImmediateOrderOpen((open) => !open)}
+          disabled={!immediateOrderItems}
+          className="w-full bg-pink-600 py-4 text-base font-bold text-white shadow-lg transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-50 md:mx-auto md:block md:max-w-xl"
+        >
+          {immediateOrderOpen ? 'Fermer la commande' : 'Commander maintenant'}
+        </button>
+
+        {immediateOrderOpen && (
+          <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-purple-100 bg-white p-5 shadow-lg md:p-6">
+            <h2 className="mb-5 font-serif text-2xl font-bold text-gray-900">Informations de livraison</h2>
+            <form onSubmit={handleImmediateOrderSubmit} className="space-y-4">
+              {!isAuthenticated && (
+                <>
+                  <input type="text" name="full_name" value={immediateOrderForm.full_name} onChange={handleImmediateOrderChange} placeholder="Nom complet *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+                  <input type="email" name="email" value={immediateOrderForm.email} onChange={handleImmediateOrderChange} placeholder="Email (optionnel)" className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+                </>
+              )}
+              {isAuthenticated && <p className="rounded-lg bg-gray-50 px-4 py-3 text-gray-700">{user?.full_name}</p>}
+              <input type="tel" name="phone" value={immediateOrderForm.phone} onChange={handleImmediateOrderChange} placeholder="Numéro de téléphone *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+              <textarea name="shipping_address" value={immediateOrderForm.shipping_address} onChange={handleImmediateOrderChange} placeholder="Adresse *" rows="3" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+              <select name="wilaya" value={immediateOrderForm.wilaya} onChange={handleImmediateOrderChange} required className="w-full rounded-lg border border-gray-300 px-4 py-3">
+                <option value="">Sélectionnez un gouvernorat *</option>
+                {governorates.map((governorate) => <option key={governorate} value={governorate}>{governorate}</option>)}
+              </select>
+              <textarea name="notes" value={immediateOrderForm.notes} onChange={handleImmediateOrderChange} placeholder="Notes additionnelles (optionnel)" rows="2" className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+
+              <div className="space-y-2 border-t border-purple-100 pt-4 text-gray-700">
+                <div className="flex justify-between"><span>Sous-total:</span><span className="font-semibold">TND {immediateSubtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Livraison:</span><span className="font-semibold text-green-600">TND 8.00</span></div>
+                <div className="flex justify-between border-t border-purple-100 pt-2 text-lg font-bold text-purple-600"><span>Total:</span><span>TND {(immediateSubtotal + 8).toFixed(2)}</span></div>
+              </div>
+              <button type="submit" disabled={immediateOrderSubmitting} className="w-full rounded-lg bg-purple-600 py-3 font-bold text-white transition hover:bg-purple-700 disabled:opacity-50">
+                {immediateOrderSubmitting ? 'Traitement en cours...' : 'Confirmer la commande'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+
       <div className="mt-3 mb-8 md:hidden">
         {renderPurchaseButton()}
       </div>
