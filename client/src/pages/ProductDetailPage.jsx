@@ -255,6 +255,7 @@ export function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [selectionRows, setSelectionRows] = useState([]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lbVisible, setLbVisible] = useState(false);
   const [adultSize, setAdultSize] = useState('');
@@ -295,8 +296,11 @@ export function ProductDetailPage() {
           if (firstAvailEnfantColor) setEnfantColor(firstAvailEnfantColor);
           else if (enfantColors.length > 0) setEnfantColor(enfantColors[0]);
        } else {
-         if (data.sizes?.length > 0) setSelectedSize(data.sizes[0]);
-         if (data.colors?.length > 0) setSelectedColor(data.colors[0]);
+         const firstSize = data.sizes?.[0] || '';
+         const firstColor = data.colors?.[0] || '';
+         if (firstSize) setSelectedSize(firstSize);
+         if (firstColor) setSelectedColor(firstColor);
+         setSelectionRows([{ size: firstSize, color: firstColor }]);
        }
       trackViewContent({ id: data.id, name: data.name, price: data.price });
     } catch {
@@ -370,23 +374,24 @@ export function ProductDetailPage() {
     }
 
     // Regular (non matchy) product
-    if (!selectedSize || !selectedColor) {
-      toast.error('Please select size and color');
+    if (selectionRows.length === 0 || selectionRows.some(row => !row.size || !row.color)) {
+      toast.error('Please select a size and color for each item');
       return;
     }
-    const variantKey = `${selectedSize}_${selectedColor}`;
-    if ((product.variants?.[variantKey] || 0) === 0) {
-      toast.error('This size and color combination is out of stock');
+    if (selectionRows.some(row => !(product.variants?.[`${row.size}_${row.color}`] > 0))) {
+      toast.error('One of the selected size and color combinations is out of stock');
       return;
     }
     try {
-      if (isAuthenticated) {
-        await cartService.addToCart({ product_id: product.id, quantity, size: selectedSize, color: selectedColor });
-      } else {
-        getOrCreateGuestSessionId();
-        addToGuestCart(product, quantity, selectedSize, selectedColor);
+      for (const row of selectionRows) {
+        if (isAuthenticated) {
+          await cartService.addToCart({ product_id: product.id, quantity: 1, size: row.size, color: row.color });
+        } else {
+          getOrCreateGuestSessionId();
+          addToGuestCart(product, 1, row.size, row.color);
+        }
       }
-      trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity });
+      trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: selectionRows.length });
       toast.success('Added to cart');
       navigate('/cart', { state: { scrollToSummary: true } });
     } catch (error) {
@@ -400,6 +405,28 @@ export function ProductDetailPage() {
   };
 
   const currentVariantStock = product ? getVariantStock() : 0;
+  const allSelectionsValid = selectionRows.length > 0 && selectionRows.every((row) => (
+    row.size && row.color && (product?.variants?.[`${row.size}_${row.color}`] || 0) > 0
+  ));
+
+  const updateSelectionRow = (rowIndex, field, value) => {
+    setSelectionRows((rows) => rows.map((row, index) => (
+      index === rowIndex ? { ...row, [field]: value } : row
+    )));
+    if (rowIndex === 0) {
+      if (field === 'size') setSelectedSize(value);
+      if (field === 'color') setSelectedColor(value);
+    }
+  };
+
+  const setSelectionQuantity = (nextQuantity) => {
+    const normalizedQuantity = Math.max(1, Math.min(20, nextQuantity));
+    setQuantity(normalizedQuantity);
+    setSelectionRows((rows) => {
+      const fallback = rows[0] || { size: selectedSize, color: selectedColor };
+      return Array.from({ length: normalizedQuantity }, (_, index) => rows[index] || { ...fallback });
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -444,6 +471,9 @@ export function ProductDetailPage() {
         else setAdultColor(colors[pageCarousel.index]);
       } else {
         setSelectedColor(colors[pageCarousel.index]);
+        setSelectionRows((rows) => rows.length
+          ? [{ ...rows[0], color: colors[pageCarousel.index] }, ...rows.slice(1)]
+          : rows);
       }
     }
   }, [pageCarousel.index, product, isMM, selectionMode, adultColor, enfantColor, selectedColor]);
@@ -490,10 +520,10 @@ export function ProductDetailPage() {
     return (
       <button
         onClick={() => handleAddToCart('single')}
-        disabled={currentVariantStock === 0}
+        disabled={!allSelectionsValid}
         className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
       >
-        {currentVariantStock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}
+        {!allSelectionsValid ? 'Sélection incomplète' : 'Ajouter au panier'}
       </button>
     );
   };
@@ -511,8 +541,15 @@ export function ProductDetailPage() {
       }
       return selections.length ? selections : null;
     }
-    if (!selectedSize || !selectedColor || currentVariantStock <= 0) return null;
-    return [{ product_id: product.id, quantity, size: selectedSize, color: selectedColor, price: product.price }];
+    if (selectionRows.length === 0 || selectionRows.some(row => !row.size || !row.color)) return null;
+    if (selectionRows.some(row => !(product.variants?.[`${row.size}_${row.color}`] > 0))) return null;
+    return selectionRows.map((row) => ({
+      product_id: product.id,
+      quantity: 1,
+      size: row.size,
+      color: row.color,
+      price: product.price,
+    }));
   };
 
   const immediateOrderItems = getImmediateOrderItems();
@@ -796,12 +833,11 @@ export function ProductDetailPage() {
           ) : (
           <div className="space-y-6 mb-8">
 
-            {/* Size */}
-            {product.sizes?.length > 0 && (
-              <div>
-                <label className="block font-semibold mb-3 text-gray-900">Taille</label>
-                <div className="flex gap-2 flex-wrap">
-                  {product.sizes.map(size => {
+            {selectionRows.map((row, rowIndex) => (
+              <div key={rowIndex} className="rounded-xl border border-purple-100 p-4">
+                <p className="mb-3 text-sm font-semibold text-gray-900">Article {rowIndex + 1}</p>
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {product.sizes?.map(size => {
                     const sizeStock = Object.entries(product.variants || {}).reduce(
                       (sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0
                     );
@@ -809,41 +845,30 @@ export function ProductDetailPage() {
                     return (
                       <button
                         key={size}
-                        onClick={() => { setSelectedSize(size); setQuantity(1); }}
+                        type="button"
+                        onClick={() => updateSelectionRow(rowIndex, 'size', size)}
                         disabled={oos}
-                        title={oos ? 'En rupture' : `${sizeStock} en stock`}
-                        className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                          selectedSize === size
-                            ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
-                            : oos
-                            ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-                            : 'border-purple-200 hover:border-purple-400 text-gray-900'
+                        className={`rounded-lg border-2 px-4 py-2 font-medium transition ${
+                          row.size === size ? 'border-purple-600 bg-purple-700 text-white' : oos ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-purple-200 text-gray-900 hover:border-purple-400'
                         }`}
                       >
-                        {size}{oos && <span className="text-xs ml-1">✕</span>}
+                        {size}{oos && <span className="ml-1 text-xs">✕</span>}
                       </button>
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* Color */}
-            {product.colors?.length > 0 && (
-              <div>
-                <label className="block font-semibold mb-3 text-gray-900">Couleur</label>
                 <ColorSwatches
-                  colors={product.colors}
-                  value={selectedColor}
+                  colors={product.colors || []}
+                  value={row.color}
                   onChange={(color) => {
-                    selectColorAndImage(color, product.colors, setSelectedColor);
-                    setQuantity(1);
+                    updateSelectionRow(rowIndex, 'color', color);
+                    if (rowIndex === 0) selectColorAndImage(color, product.colors, setSelectedColor);
                   }}
-                  getStock={(color) => selectedSize ? product.variants[`${selectedSize}_${color}`] || 0 : 0}
-                  name="Couleur"
+                  getStock={(color) => row.size ? product.variants?.[`${row.size}_${color}`] || 0 : 0}
+                  name={`Couleur article ${rowIndex + 1}`}
                 />
               </div>
-            )}
+            ))}
 
             {/* Variant stock status */}
             <div className={`p-4 rounded-xl text-sm font-medium ${
@@ -851,9 +876,9 @@ export function ProductDetailPage() {
                 ? 'bg-green-50 border border-green-200 text-green-800'
                 : 'bg-red-50 border border-red-200 text-red-800'
             }`}>
-              {currentVariantStock > 0
-                ? `✓ ${currentVariantStock} disponible(s) — taille ${selectedSize}, couleur ${selectedColor}`
-                : '✕ Cette combinaison taille/couleur est en rupture de stock'}
+              {selectionRows.length > 0
+                ? `${selectionRows.length} article(s) sélectionné(s)`
+                : '✕ Sélectionnez une taille et une couleur'}
             </div>
 
             {/* Quantity */}
@@ -861,21 +886,21 @@ export function ProductDetailPage() {
               <label className="block font-semibold mb-3 text-gray-900">Quantité</label>
               <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
                 <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  onClick={() => setSelectionQuantity(selectionRows.length - 1)}
                   className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
                 >
                   −
                 </button>
                 <input
                   type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  value={selectionRows.length}
+                  onChange={(e) => setSelectionQuantity(parseInt(e.target.value) || 1)}
                   className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
                   min="1"
-                  max={currentVariantStock}
+                  max="20"
                 />
                 <button
-                  onClick={() => setQuantity(Math.min(currentVariantStock, quantity + 1))}
+                  onClick={() => setSelectionQuantity(selectionRows.length + 1)}
                   className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
                 >
                   +
