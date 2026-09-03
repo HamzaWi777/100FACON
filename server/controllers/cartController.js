@@ -52,10 +52,6 @@ export async function addToCart(req, res) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    if (products[0].stock < quantity) {
-      return res.status(400).json({ error: 'Insufficient stock' });
-    }
-
     // Variant-level stock check (critical for matchy_matchy products
     // where adult_36 and enfant_12 variants have independent stock)
     let variantResult = [];
@@ -64,9 +60,11 @@ export async function addToCart(req, res) {
         'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
         [product_id, size, color]
       );
-      if (variantResult[0] && variantResult[0].stock < quantity) {
+      if (!variantResult[0] || variantResult[0].stock < quantity) {
         return res.status(400).json({ error: 'Insufficient variant stock' });
       }
+    } else if (products[0].stock < quantity) {
+      return res.status(400).json({ error: 'Insufficient stock' });
     }
 
     // Check if item already in cart
@@ -78,10 +76,10 @@ export async function addToCart(req, res) {
     if (existingItems.length > 0) {
       // Update quantity
       const newQuantity = existingItems[0].quantity + quantity;
-      if (products[0].stock < newQuantity) {
+      if (!size && !color && products[0].stock < newQuantity) {
         return res.status(400).json({ error: 'Insufficient stock' });
       }
-      if (size && color && variantResult[0] && variantResult[0].stock < newQuantity) {
+      if (size && color && (!variantResult[0] || variantResult[0].stock < newQuantity)) {
         return res.status(400).json({ error: 'Insufficient variant stock' });
       }
       await pool.query(
