@@ -19,7 +19,8 @@ export async function sendCapiPurchaseEvent({
 
   const eventTime = Math.floor(Date.now() / 1000);
   const value = parseFloat(totalPrice) || 0;
-  const contentIds = items.map((item) => String(item.product_id));
+  const contentIds = [...new Set(items.map((item) => String(item.product_id)))];
+  const numItems = items.reduce((sum, item) => sum + (parseInt(item.quantity, 10) || 0), 0);
 
   const event = {
     event_name: 'Purchase',
@@ -38,7 +39,7 @@ export async function sendCapiPurchaseEvent({
       currency,
       content_ids: contentIds,
       content_type: 'product',
-      num_items: items.length,
+      num_items: numItems,
     },
   };
 

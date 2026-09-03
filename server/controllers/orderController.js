@@ -4,7 +4,7 @@ import { sendCapiPurchaseEvent } from '../utils/metaCapi.js';
 export async function createOrder(req, res) {
   try {
     const userId = req.user?.id || null;
-    const { shipping_address, phone, wilaya, governorate, notes, guest_name, guest_email, guest_session_id, cartItems: bodyCartItems } = req.body;
+    const { shipping_address, phone, wilaya, governorate, notes, guest_name, guest_email, guest_session_id, cartItems: bodyCartItems, directItems } = req.body;
     
     // Support both 'wilaya' and 'governorate' field names
     const location = governorate || wilaya;
@@ -12,7 +12,9 @@ export async function createOrder(req, res) {
     let cartItems = [];
 
     // Get cart items based on user type
-    if (userId) {
+    if (directItems && Array.isArray(directItems)) {
+      cartItems = directItems;
+    } else if (userId) {
       // Authenticated user cart from database
       const [items] = await pool.query(
         `SELECT c.*, p.price as product_price, p.name, p.images 
@@ -34,7 +36,7 @@ export async function createOrder(req, res) {
       return res.status(400).json({ error: 'Cart is empty or invalid session' });
     }
 
-    if (cartItems.length === 0) {
+    if (cartItems.length === 0 || cartItems.some(item => !item.product_id || !Number.isInteger(item.quantity) || item.quantity < 1)) {
       return res.status(400).json({ error: 'Cart is empty' });
     }
 
@@ -59,6 +61,13 @@ for (const item of cartItems) {
 
   // Reduce variant-level stock (size + color specific)
   if (item.size && item.color) {
+    const [variantResult] = await pool.query(
+      'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
+      [item.product_id, item.size, item.color]
+    );
+    if (!variantResult[0] || variantResult[0].stock < item.quantity) {
+      return res.status(400).json({ error: 'Insufficient variant stock' });
+    }
     await pool.query(
       'UPDATE product_variants SET stock = GREATEST(0, stock - ?) WHERE product_id = ? AND size = ? AND color = ?',
       [item.quantity, item.product_id, item.size, item.color]
@@ -83,7 +92,7 @@ for (const item of cartItems) {
     if (pixelId && accessToken) {
       sendCapiPurchaseEvent({
         orderId,
-        totalPrice,
+        totalPrice: totalPrice + 8.00,
         currency: 'TND',
         items: cartItems,
         userIp: req.ip || req.connection?.remoteAddress,
