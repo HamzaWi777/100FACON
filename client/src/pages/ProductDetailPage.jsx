@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services';
 import { governorates } from '../constants/governorates';
 import { addToGuestCart, getOrCreateGuestSessionId } from '../utils/guestCart';
-import { trackViewContent, trackInitiateCheckout, trackPurchase } from '../utils/metaPixel';
+import { trackViewContent, trackAddToCart, trackInitiateCheckout, trackPurchase } from '../utils/metaPixel';
 import { imgSrc, preloadImages } from '../utils/imgSrc';
 import { ColorSwatches } from '../components/ColorSwatches';
 
