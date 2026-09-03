@@ -145,7 +145,7 @@ function MatchyMatchyForm({
                   disabled={oos}
                   title={oos ? 'En rupture' : `${sizeStock} en stock`}
                   className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                    adultSize === size
+                      adultSize === size
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
                       : oos
                       ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
@@ -169,6 +169,28 @@ function MatchyMatchyForm({
             name="Couleur adulte"
           />
         </div>
+
+        <div>
+          <label className="block font-semibold mb-3 text-gray-900">Quantité (Adulte)</label>
+          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
+            <button onClick={() => setAdultQty(Math.max(1, adultQty - 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
+            <input
+              type="number"
+              value={adultQty}
+              onChange={(e) => setAdultQty(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
+              min="1"
+              max={variants[`${adultSize}_${adultColor}`] || 1}
+            />
+            <button onClick={() => setAdultQty(Math.min(variants[`${adultSize}_${adultColor}`] || 1, adultQty + 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">+</button>
+          </div>
+        </div>
+      </>)
+    }
+
+      {/* ── Enfant ── */}
+      {(selectionMode === 'enfant' || selectionMode === 'both') && (
+      <>
         <div className="border-t border-purple-200 pt-4">
         <label className="block font-semibold mb-3 text-gray-900">Taille Enfant</label>
         <div className="flex gap-2 flex-wrap">
