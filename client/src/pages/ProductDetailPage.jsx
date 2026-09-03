@@ -174,9 +174,9 @@ function MatchyMatchyForm({
               onChange={(e) => resizeSelections(setAdultSelections, adultSelections, parseInt(e.target.value) || 1)}
               className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
               min="1"
-              max={variants[`${adultSize}_${adultColor}`] || 1}
+              max={20}
             />
-            <button type="button" onClick={() => resizeSelections(setAdultSelections, adultSelections, adultSelections.length + 1)} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">+</button>
+            <button type="button" disabled={adultSelections.length >= Object.entries(variants).filter(([key]) => key.startsWith('adult_')).reduce((sum, [, stock]) => sum + (parseInt(stock, 10) || 0), 0)} onClick={() => resizeSelections(setAdultSelections, adultSelections, adultSelections.length + 1)} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600 disabled:cursor-not-allowed disabled:opacity-40">+</button>
           </div>
         </div>
       </>)
@@ -221,8 +221,8 @@ function MatchyMatchyForm({
             min="1"
             max="20"
           />
-          <button type="button" onClick={() => resizeSelections(setEnfantSelections, enfantSelections, enfantSelections.length + 1)}
-            className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
+          <button type="button" disabled={enfantSelections.length >= Object.entries(variants).filter(([key]) => key.startsWith('enfant_')).reduce((sum, [, stock]) => sum + (parseInt(stock, 10) || 0), 0)} onClick={() => resizeSelections(setEnfantSelections, enfantSelections, enfantSelections.length + 1)}
+            className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600 disabled:cursor-not-allowed disabled:opacity-40"
             >+</button>
           </div>
         </div>
@@ -321,14 +321,14 @@ export function ProductDetailPage() {
     if (isMM) {
       const itemsToAdd = [];
       if (mode === 'adult' || mode === 'both') {
-        if (!adultSelections.length || adultSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) {
+        if (!hasEnoughStock(adultSelections)) {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'adulte');
           return;
         }
         itemsToAdd.push(...adultSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'adulte' })));
       }
       if (mode === 'enfant' || mode === 'both') {
-        if (!enfantSelections.length || enfantSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) {
+        if (!hasEnoughStock(enfantSelections)) {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'enfant');
           return;
         }
@@ -389,9 +389,17 @@ export function ProductDetailPage() {
   };
 
   const currentVariantStock = product ? getVariantStock() : 0;
-  const allSelectionsValid = selectionRows.length > 0 && selectionRows.every((row) => (
-    row.size && row.color && (product?.variants?.[`${row.size}_${row.color}`] || 0) > 0
-  ));
+  const hasEnoughStock = (selections) => {
+    if (!selections.length || selections.some(({ size, color }) => !size || !color)) return false;
+    const requested = selections.reduce((counts, { size, color }) => {
+      const key = `${size}_${color}`;
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {});
+    return Object.entries(requested).every(([key, count]) => (product?.variants?.[key] || 0) >= count);
+  };
+
+  const allSelectionsValid = hasEnoughStock(selectionRows);
 
   const updateSelectionRow = (rowIndex, field, value) => {
     setSelectionRows((rows) => rows.map((row, index) => (
@@ -404,7 +412,7 @@ export function ProductDetailPage() {
   };
 
   const setSelectionQuantity = (nextQuantity) => {
-    const normalizedQuantity = Math.max(1, Math.min(20, nextQuantity));
+    const normalizedQuantity = Math.max(1, Math.min(20, product?.stock || 1, nextQuantity));
     setQuantity(normalizedQuantity);
     setSelectionRows((rows) => {
       const fallback = rows[0] || { size: selectedSize, color: selectedColor };
@@ -525,17 +533,17 @@ export function ProductDetailPage() {
     if (isMM) {
       const selections = [];
       if (selectionMode === 'adult' || selectionMode === 'both') {
-        if (adultSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) return null;
+        if (!hasEnoughStock(adultSelections)) return null;
         selections.push(...adultSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.price })));
       }
       if (selectionMode === 'enfant' || selectionMode === 'both') {
-        if (enfantSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) return null;
+        if (!hasEnoughStock(enfantSelections)) return null;
         selections.push(...enfantSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.enfant_price || product.price })));
       }
       return selections.length ? selections : null;
     }
     if (selectionRows.length === 0 || selectionRows.some(row => !row.size || !row.color)) return null;
-    if (selectionRows.some(row => !(product.variants?.[`${row.size}_${row.color}`] > 0))) return null;
+    if (!hasEnoughStock(selectionRows)) return null;
     return selectionRows.map((row) => ({
       product_id: product.id,
       quantity: 1,
@@ -893,11 +901,12 @@ export function ProductDetailPage() {
                   onChange={(e) => setSelectionQuantity(parseInt(e.target.value) || 1)}
                   className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
                   min="1"
-                  max="20"
+                  max={Math.min(20, product.stock || 1)}
                 />
                 <button
                   onClick={() => setSelectionQuantity(selectionRows.length + 1)}
-                  className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
+                  disabled={selectionRows.length >= Math.min(20, product.stock || 1)}
+                  className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   +
                 </button>
