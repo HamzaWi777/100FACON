@@ -97,6 +97,15 @@ function MatchyMatchyForm({
     const fallback = selections[0] || { size: '', color: '' };
     setter(Array.from({ length: quantity }, (_, index) => selections[index] || { ...fallback }));
   };
+  const hasEnoughStock = (selections) => {
+    if (!selections.length || selections.some(({ size, color }) => !size || !color)) return false;
+    const requested = selections.reduce((counts, { size, color }) => {
+      const key = `${size}_${color}`;
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {});
+    return Object.entries(requested).every(([key, count]) => (variants[key] || 0) >= count);
+  };
   const colorDisplay = (color) => {
     const adultStock = Object.entries(variants).filter(([k]) => k.startsWith('adult_') && k.endsWith('_' + color)).reduce((s, [, v]) => s + v, 0);
     return `${color} ${adultStock === 0 ? '(Rupture)' : `(${adultStock} disponibles)`}`;
@@ -230,13 +239,20 @@ function MatchyMatchyForm({
     }
 
       {/* Variant stock status */}
-      <div className="p-4 rounded-xl text-sm font-medium bg-green-50 border border-green-200 text-green-800">
-        {(selectionMode === 'adult' || selectionMode === 'both') && adultSize && adultColor && (
-          <div>✓ Adulte: taille {adultSize.replace('adult_', '')}, couleur {adultColor} — {variants[`${adultSize}_${adultColor}`] || 0} disponible(s)</div>
-        )}
-        {(selectionMode === 'enfant' || selectionMode === 'both') && enfantSize && enfantColor && (
-          <div>✓ Enfant: taille {enfantSize.replace('enfant_', '')}, couleur {enfantColor} — {variants[`${enfantSize}_${enfantColor}`] || 0} disponible(s)</div>
-        )}
+      <div className={`p-4 rounded-xl text-sm font-medium ${
+        ((selectionMode === 'adult' && hasEnoughStock(adultSelections))
+          || (selectionMode === 'enfant' && hasEnoughStock(enfantSelections))
+          || (selectionMode === 'both' && hasEnoughStock(adultSelections) && hasEnoughStock(enfantSelections)))
+          ? 'bg-green-50 border border-green-200 text-green-800'
+          : 'bg-red-50 border border-red-200 text-red-800'
+      }`}>
+        {selectionMode === 'adult' && hasEnoughStock(adultSelections)
+          ? `✓ ${adultSelections.length} article(s) adulte(s) sélectionné(s)`
+          : selectionMode === 'enfant' && hasEnoughStock(enfantSelections)
+            ? `✓ ${enfantSelections.length} article(s) enfant(s) sélectionné(s)`
+            : selectionMode === 'both' && hasEnoughStock(adultSelections) && hasEnoughStock(enfantSelections)
+              ? `✓ ${adultSelections.length + enfantSelections.length} article(s) sélectionné(s)`
+              : '✕ Un article sélectionné est en rupture de stock ou incomplet'}
       </div>
     </div>
   );
@@ -400,6 +416,11 @@ export function ProductDetailPage() {
   };
 
   const allSelectionsValid = hasEnoughStock(selectionRows);
+  const activeMatchySelectionsValid = selectionMode === 'adult'
+    ? hasEnoughStock(adultSelections)
+    : selectionMode === 'enfant'
+      ? hasEnoughStock(enfantSelections)
+      : hasEnoughStock(adultSelections) && hasEnoughStock(enfantSelections);
 
   const updateSelectionRow = (rowIndex, field, value) => {
     setSelectionRows((rows) => rows.map((row, index) => (
@@ -496,16 +517,14 @@ export function ProductDetailPage() {
 
   const renderPurchaseButton = () => {
     if (isMM) {
-      const adultAvailable = adultSelections.length > 0 && adultSelections.every(({ size, color }) => size && color && (product.variants?.[`${size}_${color}`] || 0) > 0);
-      const enfantAvailable = enfantSelections.length > 0 && enfantSelections.every(({ size, color }) => size && color && (product.variants?.[`${size}_${color}`] || 0) > 0);
       let disabled = false;
       let label = 'Ajouter au panier';
       if (selectionMode === 'adult') {
-        disabled = !adultAvailable;
+        disabled = !activeMatchySelectionsValid;
       } else if (selectionMode === 'enfant') {
-        disabled = !enfantAvailable;
+        disabled = !activeMatchySelectionsValid;
       } else {
-        disabled = !adultAvailable && !enfantAvailable;
+        disabled = !activeMatchySelectionsValid;
       }
       return (
         <button
@@ -878,13 +897,13 @@ export function ProductDetailPage() {
 
             {/* Variant stock status */}
             <div className={`p-4 rounded-xl text-sm font-medium ${
-              currentVariantStock > 0
+              allSelectionsValid
                 ? 'bg-green-50 border border-green-200 text-green-800'
                 : 'bg-red-50 border border-red-200 text-red-800'
             }`}>
-                {currentVariantStock > 0
-                  ? `✓ ${currentVariantStock} disponible(s) — taille ${selectedSize}, couleur ${selectedColor}`
-                  : '✕ Cette combinaison taille/couleur est en rupture de stock'}
+                {allSelectionsValid
+                  ? `✓ ${selectionRows.length} article(s) sélectionné(s)`
+                  : '✕ Un article sélectionné est en rupture de stock ou incomplet'}
             </div>
 
             {/* Quantity */}
