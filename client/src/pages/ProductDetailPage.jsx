@@ -141,7 +141,7 @@ function MatchyMatchyForm({
                   key={size}
                   onClick={() => setAdultSize(size)}
                   disabled={oos}
-                  title={oos ? 'En rupture' : `${sizeStock} en stock`}
+                  title={oos ? 'En rupture' : `en stock`}
                   className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
                     adultSize === size
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
@@ -540,6 +540,18 @@ export function ProductDetailPage() {
       document.body.style.overflow = '';
     };
   }, [lightboxOpen]);
+
+  // The lightbox track mounts after setIndex, so apply the selected slide once its DOM exists.
+  useEffect(() => {
+    if (!lightboxOpen || !product?.images?.length) return;
+    const frame = requestAnimationFrame(() => {
+      const track = lightboxCarousel.containerRef.current;
+      if (!track) return;
+      track.style.transition = 'none';
+      track.style.transform = `translate3d(${-lightboxCarousel.index * 100}%, 0, 0)`;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [lightboxOpen, product, lightboxCarousel.index]);
 
   // Preload neighbouring images for smooth navigation
   useEffect(() => {
