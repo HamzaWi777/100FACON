@@ -169,34 +169,34 @@ function MatchyMatchyForm({
             name="Couleur adulte"
           />
         </div>
-
-        <div>
-          <label className="block font-semibold mb-3 text-gray-900">Quantité (Adulte)</label>
-          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
-            <button onClick={() => setAdultQty(Math.max(1, adultQty - 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
-            <input
-              type="number"
-              value={adultQty}
-              onChange={(e) => setAdultQty(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
-              min="1"
-              max={variants[`${adultSize}_${adultColor}`] || 1}
-            />
-            <button
-              onClick={() => {
-                const max = variants[`${adultSize}_${adultColor}`] || 1;
-                setAdultQty(Math.min(max, adultQty + 1));
-              }}
-              className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
-            >+</button>
+          <div className="mt-8 border-t border-purple-200 pt-6">
+            <div className="rounded-2xl border border-purple-100 bg-white p-5 shadow-lg md:p-6">
+              <h2 className="mb-5 font-serif text-2xl font-bold text-gray-900">Informations de livraison</h2>
+              <form onSubmit={handleImmediateOrderSubmit} className="space-y-4">
+                {!isAuthenticated && (
+                  <>
+                    <input type="text" name="full_name" value={immediateOrderForm.full_name} onChange={handleImmediateOrderChange} placeholder="Nom complet *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+                    <input type="email" name="email" value={immediateOrderForm.email} onChange={handleImmediateOrderChange} placeholder="Email (optionnel)" className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+                  </>
+                )}
+                {isAuthenticated && <p className="rounded-lg bg-gray-50 px-4 py-3 text-gray-700">{user?.full_name}</p>}
+                <input type="tel" name="phone" value={immediateOrderForm.phone} onChange={handleImmediateOrderChange} placeholder="Numéro de téléphone *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+                <textarea name="shipping_address" value={immediateOrderForm.shipping_address} onChange={handleImmediateOrderChange} placeholder="Adresse *" rows="3" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+                <select name="wilaya" value={immediateOrderForm.wilaya} onChange={handleImmediateOrderChange} required className="w-full rounded-lg border border-gray-300 px-4 py-3">
+                  <option value="">Sélectionnez un gouvernorat *</option>
+                  {governorates.map((governorate) => <option key={governorate} value={governorate}>{governorate}</option>)}
+                </select>
+                <div className="space-y-2 border-t border-purple-100 pt-4 text-gray-700">
+                  <div className="flex justify-between"><span>Sous-total:</span><span className="font-semibold">TND {immediateSubtotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Livraison:</span><span className="font-semibold text-green-600">TND 8.00</span></div>
+                  <div className="flex justify-between border-t border-purple-100 pt-2 text-lg font-bold text-purple-600"><span>Total:</span><span>TND {(immediateSubtotal + 8).toFixed(2)}</span></div>
+                </div>
+                <button type="submit" disabled={immediateOrderSubmitting || !immediateOrderItems} className="w-full rounded-lg bg-purple-600 py-3 font-bold text-white transition hover:bg-purple-700 disabled:opacity-50">
+                  {immediateOrderSubmitting ? 'Traitement en cours...' : 'Confirmer la commande'}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
-      </>)
-    }
-
-      {/* ── Enfant ── */}
-      {(selectionMode === 'enfant' || selectionMode === 'both') && (
-      <>
         <div className="border-t border-purple-200 pt-4">
         <label className="block font-semibold mb-3 text-gray-900">Taille Enfant</label>
         <div className="flex gap-2 flex-wrap">
@@ -292,10 +292,9 @@ export function ProductDetailPage() {
   const [enfantColor, setEnfantColor] = useState('');
   const [enfantQty, setEnfantQty] = useState(1);
   const [selectionMode, setSelectionMode] = useState('both');
-  const [immediateOrderOpen, setImmediateOrderOpen] = useState(false);
   const [immediateOrderSubmitting, setImmediateOrderSubmitting] = useState(false);
   const [immediateOrderForm, setImmediateOrderForm] = useState({
-    full_name: '', email: '', phone: '', shipping_address: '', wilaya: '', notes: '',
+    full_name: '', email: '', phone: '', shipping_address: '', wilaya: '',
   });
   const pageCarousel = useSwipeCarousel(product?.images?.length || 0);
   const lightboxCarousel = useSwipeCarousel(product?.images?.length || 0);
@@ -497,16 +496,13 @@ export function ProductDetailPage() {
       const adultAvailable = adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0;
       const enfantAvailable = enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0;
       let disabled = false;
-      let label = 'Acheter';
+      let label = 'Ajouter au panier';
       if (selectionMode === 'adult') {
         disabled = !adultAvailable;
-        label = 'Acheter l\'adulte';
       } else if (selectionMode === 'enfant') {
         disabled = !enfantAvailable;
-        label = 'Acheter l\'enfant';
       } else {
         disabled = !adultAvailable && !enfantAvailable;
-        label = 'Acheter les deux';
       }
       return (
         <button
@@ -525,7 +521,7 @@ export function ProductDetailPage() {
         disabled={currentVariantStock === 0}
         className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-4 rounded-full hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base md:text-lg shadow-lg hover:shadow-xl"
       >
-        {currentVariantStock === 0 ? 'Rupture de stock' : 'Acheter'}
+        {currentVariantStock === 0 ? 'Rupture de stock' : 'Ajouter au panier'}
       </button>
     );
   };
@@ -581,13 +577,43 @@ export function ProductDetailPage() {
         numItems: immediateOrderItems.reduce((sum, item) => sum + item.quantity, 0),
       });
       toast.success('Commande confirmée avec succès');
-      setImmediateOrderOpen(false);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Impossible de confirmer la commande');
     } finally {
       setImmediateOrderSubmitting(false);
     }
   };
+
+  const renderImmediateOrderForm = () => (
+    <div className="mt-8 border-t border-purple-200 pt-6">
+      <div className="rounded-2xl border border-purple-100 bg-white p-5 shadow-lg md:p-6">
+        <h2 className="mb-5 font-serif text-2xl font-bold text-gray-900">Informations de livraison</h2>
+        <form onSubmit={handleImmediateOrderSubmit} className="space-y-4">
+          {!isAuthenticated && (
+            <>
+              <input type="text" name="full_name" value={immediateOrderForm.full_name} onChange={handleImmediateOrderChange} placeholder="Nom complet *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+              <input type="email" name="email" value={immediateOrderForm.email} onChange={handleImmediateOrderChange} placeholder="Email (optionnel)" className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+            </>
+          )}
+          {isAuthenticated && <p className="rounded-lg bg-gray-50 px-4 py-3 text-gray-700">{user?.full_name}</p>}
+          <input type="tel" name="phone" value={immediateOrderForm.phone} onChange={handleImmediateOrderChange} placeholder="Numéro de téléphone *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+          <textarea name="shipping_address" value={immediateOrderForm.shipping_address} onChange={handleImmediateOrderChange} placeholder="Adresse *" rows="3" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
+          <select name="wilaya" value={immediateOrderForm.wilaya} onChange={handleImmediateOrderChange} required className="w-full rounded-lg border border-gray-300 px-4 py-3">
+            <option value="">Sélectionnez un gouvernorat *</option>
+            {governorates.map((governorate) => <option key={governorate} value={governorate}>{governorate}</option>)}
+          </select>
+          <div className="space-y-2 border-t border-purple-100 pt-4 text-gray-700">
+            <div className="flex justify-between"><span>Sous-total:</span><span className="font-semibold">TND {immediateSubtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Livraison:</span><span className="font-semibold text-green-600">TND 8.00</span></div>
+            <div className="flex justify-between border-t border-purple-100 pt-2 text-lg font-bold text-purple-600"><span>Total:</span><span>TND {(immediateSubtotal + 8).toFixed(2)}</span></div>
+          </div>
+          <button type="submit" disabled={immediateOrderSubmitting || !immediateOrderItems} className="w-full rounded-lg bg-pink-600 py-3 font-bold text-white transition hover:bg-pink-700 disabled:opacity-50">
+            {immediateOrderSubmitting ? 'Traitement en cours...' : 'Commander maintenant'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 
 
   // ── Lightbox ──
@@ -874,54 +900,13 @@ export function ProductDetailPage() {
           </div>
           )}
 
+          {renderImmediateOrderForm()}
+
           {/* Sticky CTA on mobile */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t-2 border-purple-200 md:static md:p-0 md:border-0 md:bg-transparent z-40 shadow-2xl md:shadow-none">
             {renderPurchaseButton()}
           </div>
         </div>
-      </div>
-
-      {/* Purchase CTA at the end of the product content */}
-      <div className="mt-8 border-t border-purple-200 pt-6">
-        <button
-          type="button"
-          onClick={() => setImmediateOrderOpen((open) => !open)}
-          disabled={!immediateOrderItems}
-          className="w-full bg-pink-600 py-4 text-base font-bold text-white shadow-lg transition hover:bg-pink-700 disabled:cursor-not-allowed disabled:opacity-50 md:mx-auto md:block md:max-w-xl"
-        >
-          {immediateOrderOpen ? 'Fermer la commande' : 'Commander maintenant'}
-        </button>
-
-        {immediateOrderOpen && (
-          <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-purple-100 bg-white p-5 shadow-lg md:p-6">
-            <h2 className="mb-5 font-serif text-2xl font-bold text-gray-900">Informations de livraison</h2>
-            <form onSubmit={handleImmediateOrderSubmit} className="space-y-4">
-              {!isAuthenticated && (
-                <>
-                  <input type="text" name="full_name" value={immediateOrderForm.full_name} onChange={handleImmediateOrderChange} placeholder="Nom complet *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
-                  <input type="email" name="email" value={immediateOrderForm.email} onChange={handleImmediateOrderChange} placeholder="Email (optionnel)" className="w-full rounded-lg border border-gray-300 px-4 py-3" />
-                </>
-              )}
-              {isAuthenticated && <p className="rounded-lg bg-gray-50 px-4 py-3 text-gray-700">{user?.full_name}</p>}
-              <input type="tel" name="phone" value={immediateOrderForm.phone} onChange={handleImmediateOrderChange} placeholder="Numéro de téléphone *" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
-              <textarea name="shipping_address" value={immediateOrderForm.shipping_address} onChange={handleImmediateOrderChange} placeholder="Adresse *" rows="3" required className="w-full rounded-lg border border-gray-300 px-4 py-3" />
-              <select name="wilaya" value={immediateOrderForm.wilaya} onChange={handleImmediateOrderChange} required className="w-full rounded-lg border border-gray-300 px-4 py-3">
-                <option value="">Sélectionnez un gouvernorat *</option>
-                {governorates.map((governorate) => <option key={governorate} value={governorate}>{governorate}</option>)}
-              </select>
-              <textarea name="notes" value={immediateOrderForm.notes} onChange={handleImmediateOrderChange} placeholder="Notes additionnelles (optionnel)" rows="2" className="w-full rounded-lg border border-gray-300 px-4 py-3" />
-
-              <div className="space-y-2 border-t border-purple-100 pt-4 text-gray-700">
-                <div className="flex justify-between"><span>Sous-total:</span><span className="font-semibold">TND {immediateSubtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Livraison:</span><span className="font-semibold text-green-600">TND 8.00</span></div>
-                <div className="flex justify-between border-t border-purple-100 pt-2 text-lg font-bold text-purple-600"><span>Total:</span><span>TND {(immediateSubtotal + 8).toFixed(2)}</span></div>
-              </div>
-              <button type="submit" disabled={immediateOrderSubmitting} className="w-full rounded-lg bg-purple-600 py-3 font-bold text-white transition hover:bg-purple-700 disabled:opacity-50">
-                {immediateOrderSubmitting ? 'Traitement en cours...' : 'Confirmer la commande'}
-              </button>
-            </form>
-          </div>
-        )}
       </div>
 
       <div className="mt-3 mb-8 md:hidden">
