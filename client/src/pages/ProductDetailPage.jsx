@@ -80,13 +80,23 @@ function MatchyMatchyForm({
   product,
   adultSize, setAdultSize,
   adultColor, setAdultColor,
-  adultQty, setAdultQty,
   enfantSize, setEnfantSize,
   enfantColor, setEnfantColor,
-   enfantQty, setEnfantQty,
+  adultSelections, setAdultSelections,
+  enfantSelections, setEnfantSelections,
   selectionMode, setSelectionMode,
 }) {
   const variants = product.variants || {};
+  const updateSelection = (setter, index, field, value) => {
+    setter((selections) => selections.map((selection, selectionIndex) => (
+      selectionIndex === index ? { ...selection, [field]: value } : selection
+    )));
+  };
+  const resizeSelections = (setter, selections, nextQuantity) => {
+    const quantity = Math.max(1, Math.min(20, nextQuantity));
+    const fallback = selections[0] || { size: '', color: '' };
+    setter(Array.from({ length: quantity }, (_, index) => selections[index] || { ...fallback }));
+  };
   const colorDisplay = (color) => {
     const adultStock = Object.entries(variants).filter(([k]) => k.startsWith('adult_') && k.endsWith('_' + color)).reduce((s, [, v]) => s + v, 0);
     return `${color} ${adultStock === 0 ? '(Rupture)' : `(${adultStock} disponibles)`}`;
@@ -130,59 +140,43 @@ function MatchyMatchyForm({
       {/* ── Adulte ── */}
       {(selectionMode === 'adult' || selectionMode === 'both') && (
       <>
-        <div>
-          <label className="block font-semibold mb-3 text-gray-900">Taille Adulte</label>
-          <div className="flex gap-2 flex-wrap">
+        {adultSelections.map((selection, index) => (
+        <div key={`adult-${index}`} className="rounded-xl border border-purple-100 p-4">
+          <p className="mb-3 text-sm font-semibold text-gray-900">Adulte {index + 1}</p>
+          <div className="mb-4 flex flex-wrap gap-2">
             {product.sizes.map(size => {
-              const sizeStock = Object.entries(variants).reduce(
-                (sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0
-              );
+              const sizeStock = Object.entries(variants).reduce((sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0);
               const oos = sizeStock === 0;
               return (
-                <button
-                  key={size}
-                  onClick={() => setAdultSize(size)}
-                  disabled={oos}
-                  title={oos ? 'En rupture' : `${sizeStock} en stock`}
-                  className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                      adultSize === size
-                      ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white border-purple-600'
-                      : oos
-                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-                      : 'border-purple-200 hover:border-purple-400 text-gray-900'
-                  }`}
-                >
-                  {size.replace('adult_', '')}{oos && <span className="text-xs ml-1">✕</span>}
+                <button key={size} type="button" onClick={() => { updateSelection(setAdultSelections, index, 'size', size); if (index === 0) setAdultSize(size); }} disabled={oos} className={`rounded-lg border-2 px-4 py-2 font-medium transition ${selection.size === size ? 'border-purple-600 bg-purple-700 text-white' : oos ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-purple-200 text-gray-900 hover:border-purple-400'}`}>
+                  {size.replace('adult_', '')}{oos && <span className="ml-1 text-xs">✕</span>}
                 </button>
               );
             })}
           </div>
-        </div>
-
-        <div>
-          <label className="block font-semibold mb-3 text-gray-900">Couleur Adulte</label>
           <ColorSwatches
             colors={product.colors}
-            value={adultColor}
-                    onChange={(color) => selectColorAndImage(color, product.colors, setAdultColor)}
-            getStock={(color) => adultSize ? variants[`${adultSize}_${color}`] || 0 : 0}
-            name="Couleur adulte"
+            value={selection.color}
+            onChange={(color) => { updateSelection(setAdultSelections, index, 'color', color); if (index === 0) selectColorAndImage(color, product.colors, setAdultColor); }}
+            getStock={(color) => selection.size ? variants[`${selection.size}_${color}`] || 0 : 0}
+            name={`Couleur adulte ${index + 1}`}
           />
         </div>
+        ))}
 
         <div>
-          <label className="block font-semibold mb-3 text-gray-900">Quantité (Adulte)</label>
+          <label className="block font-semibold mb-3 text-gray-900">Quantité adulte</label>
           <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
-            <button onClick={() => setAdultQty(Math.max(1, adultQty - 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
+            <button type="button" onClick={() => resizeSelections(setAdultSelections, adultSelections, adultSelections.length - 1)} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
             <input
               type="number"
-              value={adultQty}
-              onChange={(e) => setAdultQty(Math.max(1, parseInt(e.target.value) || 1))}
+              value={adultSelections.length}
+              onChange={(e) => resizeSelections(setAdultSelections, adultSelections, parseInt(e.target.value) || 1)}
               className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
               min="1"
               max={variants[`${adultSize}_${adultColor}`] || 1}
             />
-            <button onClick={() => setAdultQty(Math.min(variants[`${adultSize}_${adultColor}`] || 1, adultQty + 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">+</button>
+            <button type="button" onClick={() => resizeSelections(setAdultSelections, adultSelections, adultSelections.length + 1)} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">+</button>
           </div>
         </div>
       </>)
@@ -191,63 +185,43 @@ function MatchyMatchyForm({
       {/* ── Enfant ── */}
       {(selectionMode === 'enfant' || selectionMode === 'both') && (
       <>
-        <div className="border-t border-purple-200 pt-4">
-        <label className="block font-semibold mb-3 text-gray-900">Taille Enfant</label>
-        <div className="flex gap-2 flex-wrap">
-          {(product.enfant_sizes || []).map(size => {
-            const sizeStock = Object.entries(variants).reduce(
-              (sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0
-            );
-            const oos = sizeStock === 0;
-            return (
-              <button
-                key={size}
-                onClick={() => setEnfantSize(size)}
-                disabled={oos}
-                title={oos ? 'En rupture' : `${sizeStock} en stock`}
-                className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                  enfantSize === size
-                    ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white border-pink-600'
-                    : oos
-                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
-                    : 'border-pink-200 hover:border-pink-400 text-gray-900'
-                }`}
-              >
-                {size.replace('enfant_', '')}{oos && <span className="text-xs ml-1">✕</span>}
-              </button>
-            );
-          })}
+        {enfantSelections.map((selection, index) => (
+        <div key={`enfant-${index}`} className="rounded-xl border border-pink-100 p-4">
+          <p className="mb-3 text-sm font-semibold text-gray-900">Enfant {index + 1}</p>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {(product.enfant_sizes || []).map(size => {
+              const sizeStock = Object.entries(variants).reduce((sum, [key, stock]) => key.startsWith(size + '_') ? sum + stock : sum, 0);
+              const oos = sizeStock === 0;
+              return (
+                <button key={size} type="button" onClick={() => { updateSelection(setEnfantSelections, index, 'size', size); if (index === 0) setEnfantSize(size); }} disabled={oos} className={`rounded-lg border-2 px-4 py-2 font-medium transition ${selection.size === size ? 'border-pink-600 bg-pink-700 text-white' : oos ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-pink-200 text-gray-900 hover:border-pink-400'}`}>
+                  {size.replace('enfant_', '')}{oos && <span className="ml-1 text-xs">✕</span>}
+                </button>
+              );
+            })}
+          </div>
+          <ColorSwatches
+            colors={product.enfant_colors || product.colors}
+            value={selection.color}
+            onChange={(color) => { updateSelection(setEnfantSelections, index, 'color', color); if (index === 0) selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor); }}
+            getStock={(color) => selection.size ? variants[`${selection.size}_${color}`] || 0 : 0}
+            name={`Couleur enfant ${index + 1}`}
+          />
         </div>
-      </div>
+        ))}
 
       <div>
-        <label className="block font-semibold mb-3 text-gray-900">Couleur Enfant</label>
-        <ColorSwatches
-          colors={product.enfant_colors || product.colors}
-          value={enfantColor}
-          onChange={(color) => selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor)}
-          getStock={(color) => enfantSize ? variants[`${enfantSize}_${color}`] || 0 : 0}
-          name="Couleur enfant"
-        />
-      </div>
-
-      <div>
-        <label className="block font-semibold mb-3 text-gray-900">Quantité (Enfant)</label>
+          <label className="block font-semibold mb-3 text-gray-900">Quantité enfant</label>
         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
-          <button onClick={() => setEnfantQty(Math.max(1, enfantQty - 1))} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
+          <button type="button" onClick={() => resizeSelections(setEnfantSelections, enfantSelections, enfantSelections.length - 1)} className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600">−</button>
           <input
             type="number"
-            value={enfantQty}
-            onChange={(e) => setEnfantQty(Math.max(1, parseInt(e.target.value) || 1))}
+            value={enfantSelections.length}
+            onChange={(e) => resizeSelections(setEnfantSelections, enfantSelections, parseInt(e.target.value) || 1)}
             className="w-12 text-center px-2 py-2 bg-gray-100 border-0 font-bold"
             min="1"
-            max={variants[`${enfantSize}_${enfantColor}`] || 1}
+            max="20"
           />
-          <button
-            onClick={() => {
-              const max = variants[`${enfantSize}_${enfantColor}`] || 1;
-              setEnfantQty(Math.min(max, enfantQty + 1));
-            }}
+          <button type="button" onClick={() => resizeSelections(setEnfantSelections, enfantSelections, enfantSelections.length + 1)}
             className="w-10 h-10 hover:bg-purple-200 rounded-lg transition font-bold text-purple-600"
             >+</button>
           </div>
@@ -282,10 +256,10 @@ export function ProductDetailPage() {
   const [lbVisible, setLbVisible] = useState(false);
   const [adultSize, setAdultSize] = useState('');
   const [adultColor, setAdultColor] = useState('');
-  const [adultQty, setAdultQty] = useState(1);
+  const [adultSelections, setAdultSelections] = useState([{ size: '', color: '' }]);
   const [enfantSize, setEnfantSize] = useState('');
   const [enfantColor, setEnfantColor] = useState('');
-  const [enfantQty, setEnfantQty] = useState(1);
+  const [enfantSelections, setEnfantSelections] = useState([{ size: '', color: '' }]);
   const [selectionMode, setSelectionMode] = useState('both');
   const [immediateOrderSubmitting, setImmediateOrderSubmitting] = useState(false);
   const [immediateOrderForm, setImmediateOrderForm] = useState({
@@ -307,6 +281,7 @@ export function ProductDetailPage() {
         if (data.is_matchy_matchy) {
           if (data.sizes?.length > 0) setAdultSize(data.sizes[0]);
           if (data.colors?.length > 0) setAdultColor(data.colors[0]);
+          setAdultSelections([{ size: data.sizes?.[0] || '', color: data.colors?.[0] || '' }]);
           if (data.enfant_sizes?.length > 0) setEnfantSize(data.enfant_sizes[0]);
           const enfantColors = data.enfant_colors || data.colors || [];
           const firstAvailEnfantColor = enfantColors.find(color => {
@@ -317,6 +292,7 @@ export function ProductDetailPage() {
           });
           if (firstAvailEnfantColor) setEnfantColor(firstAvailEnfantColor);
           else if (enfantColors.length > 0) setEnfantColor(enfantColors[0]);
+          setEnfantSelections([{ size: data.enfant_sizes?.[0] || '', color: firstAvailEnfantColor || enfantColors[0] || '' }]);
        } else {
          const firstSize = data.sizes?.[0] || '';
          const firstColor = data.colors?.[0] || '';
@@ -345,32 +321,18 @@ export function ProductDetailPage() {
     if (isMM) {
       const itemsToAdd = [];
       if (mode === 'adult' || mode === 'both') {
-        if (adultSize && adultColor) {
-          const adultKey = `${adultSize}_${adultColor}`;
-          if ((product.variants?.[adultKey] || 0) > 0) {
-            itemsToAdd.push({ size: adultSize, color: adultColor, quantity: adultQty, label: 'adulte' });
-          } else if (mode === 'adult') {
-            toast.error('La combinaison taille/couleur adulte sélectionnée est en rupture de stock');
-            return;
-          }
-        } else if (mode === 'adult') {
+        if (!adultSelections.length || adultSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'adulte');
           return;
         }
+        itemsToAdd.push(...adultSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'adulte' })));
       }
       if (mode === 'enfant' || mode === 'both') {
-        if (enfantSize && enfantColor) {
-          const enfantKey = `${enfantSize}_${enfantColor}`;
-          if ((product.variants?.[enfantKey] || 0) > 0) {
-            itemsToAdd.push({ size: enfantSize, color: enfantColor, quantity: enfantQty, label: 'enfant' });
-          } else if (mode === 'enfant') {
-            toast.error('La combinaison taille/couleur enfant sélectionnée est en rupture de stock');
-            return;
-          }
-        } else if (mode === 'enfant') {
+        if (!enfantSelections.length || enfantSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'enfant');
           return;
         }
+        itemsToAdd.push(...enfantSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'enfant' })));
       }
       if (itemsToAdd.length === 0) {
         toast.error('Veuillez sélectionner au moins une taille/couleur disponible');
@@ -489,8 +451,17 @@ export function ProductDetailPage() {
       : selectedColor;
     if (colors[pageCarousel.index] && colors[pageCarousel.index] !== color) {
       if (isMM) {
-        if (selectionMode === 'enfant') setEnfantColor(colors[pageCarousel.index]);
-        else setAdultColor(colors[pageCarousel.index]);
+        if (selectionMode === 'enfant') {
+          setEnfantColor(colors[pageCarousel.index]);
+          setEnfantSelections((selections) => selections.length
+            ? [{ ...selections[0], color: colors[pageCarousel.index] }, ...selections.slice(1)]
+            : selections);
+        } else {
+          setAdultColor(colors[pageCarousel.index]);
+          setAdultSelections((selections) => selections.length
+            ? [{ ...selections[0], color: colors[pageCarousel.index] }, ...selections.slice(1)]
+            : selections);
+        }
       } else {
         setSelectedColor(colors[pageCarousel.index]);
         setSelectionRows((rows) => rows.length
@@ -517,8 +488,8 @@ export function ProductDetailPage() {
 
   const renderPurchaseButton = () => {
     if (isMM) {
-      const adultAvailable = adultSize && adultColor && (product.variants?.[`${adultSize}_${adultColor}`] || 0) > 0;
-      const enfantAvailable = enfantSize && enfantColor && (product.variants?.[`${enfantSize}_${enfantColor}`] || 0) > 0;
+      const adultAvailable = adultSelections.length > 0 && adultSelections.every(({ size, color }) => size && color && (product.variants?.[`${size}_${color}`] || 0) > 0);
+      const enfantAvailable = enfantSelections.length > 0 && enfantSelections.every(({ size, color }) => size && color && (product.variants?.[`${size}_${color}`] || 0) > 0);
       let disabled = false;
       let label = 'Ajouter au panier';
       if (selectionMode === 'adult') {
@@ -554,12 +525,12 @@ export function ProductDetailPage() {
     if (isMM) {
       const selections = [];
       if (selectionMode === 'adult' || selectionMode === 'both') {
-        if (!adultSize || !adultColor || !(product.variants?.[`${adultSize}_${adultColor}`] > 0)) return null;
-        selections.push({ product_id: product.id, quantity: adultQty, size: adultSize, color: adultColor, price: product.price });
+        if (adultSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) return null;
+        selections.push(...adultSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.price })));
       }
       if (selectionMode === 'enfant' || selectionMode === 'both') {
-        if (!enfantSize || !enfantColor || !(product.variants?.[`${enfantSize}_${enfantColor}`] > 0)) return null;
-        selections.push({ product_id: product.id, quantity: enfantQty, size: enfantSize, color: enfantColor, price: product.enfant_price || product.price });
+        if (enfantSelections.some(({ size, color }) => !size || !color || !(product.variants?.[`${size}_${color}`] > 0))) return null;
+        selections.push(...enfantSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.enfant_price || product.price })));
       }
       return selections.length ? selections : null;
     }
@@ -845,10 +816,10 @@ export function ProductDetailPage() {
               product={product}
               adultSize={adultSize} setAdultSize={setAdultSize}
               adultColor={adultColor} setAdultColor={setAdultColor}
-              adultQty={adultQty} setAdultQty={setAdultQty}
               enfantSize={enfantSize} setEnfantSize={setEnfantSize}
               enfantColor={enfantColor} setEnfantColor={setEnfantColor}
-              enfantQty={enfantQty} setEnfantQty={setEnfantQty}
+              adultSelections={adultSelections} setAdultSelections={setAdultSelections}
+              enfantSelections={enfantSelections} setEnfantSelections={setEnfantSelections}
               selectionMode={selectionMode}
               setSelectionMode={setSelectionMode}
             />
