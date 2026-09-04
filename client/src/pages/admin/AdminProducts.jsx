@@ -244,7 +244,6 @@ export function AdminProducts() {
             {/* Matchy Matchy: Adult sizes + stock */}
             {isMM && (
               <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <label className="block text-sm font-medium text-gray-900 mb-3">Tailles adulte</label>
                 
 
                 <label className="block text-sm font-medium text-gray-900 mb-3">Stock adulte par taille et couleur</label>
@@ -312,11 +311,7 @@ export function AdminProducts() {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-3">Tailles voilée</label>
-                      
-                    </div>
-
+                  
                     <label className="block text-sm font-medium text-gray-900 mb-3">Stock voilée par taille et couleur</label>
                     <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
                       <table className="w-full min-w-max">
@@ -372,10 +367,7 @@ export function AdminProducts() {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-900 mb-3">Tailles enfant</label>
-                  
-                </div>
+                
 
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-3">Stock enfant par taille et couleur</label>
