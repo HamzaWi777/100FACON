@@ -179,8 +179,12 @@ export async function getAllProducts(req, res) {
       enfantColors = [];
     }
 
+    const voileeSizes = safeParseJSON(p.voilee_sizes, []);
+    const voileeColors = safeParseJSON(p.voilee_colors, []);
+    const voileeEnabled = p.voilee === 1;
+
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [p.id]);
-    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, p.is_matchy_matchy === 1));
+    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, p.is_matchy_matchy === 1, voileeSizes, voileeColors, voileeEnabled));
     const variantStock = {};
     validVariants.forEach(v => {
       const key = `${v.size || 'none'}_${v.color || 'none'}`;
@@ -276,9 +280,13 @@ export async function getProductById(req, res) {
 
     enfantColors = safeParseJSON(product.enfant_colors, []);
 
+    const voileeSizes = safeParseJSON(product.voilee_sizes, []);
+    const voileeColors = safeParseJSON(product.voilee_colors, []);
+    const voileeEnabled = product.voilee === 1;
+
     // Fetch variants for this product
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [id]);
-    const validVariants = variants.filter(v => isValidVariant( v, sizes, colors, enfantSizes, enfantColors, product.is_matchy_matchy === 1));
+    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, product.is_matchy_matchy === 1, voileeSizes, voileeColors, voileeEnabled));
     const variantStock = {};
     validVariants.forEach(v => {
       const key = `${v.size || 'none'}_${v.color || 'none'}`;
