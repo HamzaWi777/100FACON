@@ -157,12 +157,13 @@ function CheckoutPageContent() {
                        className="w-24 h-24 object-cover rounded-lg"
                      />
                    )}
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {item.size} | {item.color} | Qty: {item.quantity}
-                    </p>
-                  </div>
+                   <div className="flex-1">
+                     <p className="font-semibold text-gray-900">{item.name}</p>
+                     <p className="text-sm text-gray-600">
+                       {item.size} | {item.color} | Qty: {item.quantity}
+                       {item.voilee && <span className="ml-2 text-purple-700 font-medium">🧕 Voilée</span>}
+                     </p>
+                   </div>
                   <p className="text-right font-semibold text-purple-600">
                     TND {((typeof item.price === 'string' ? parseFloat(item.price) : item.price) * item.quantity).toFixed(2)}
                   </p>

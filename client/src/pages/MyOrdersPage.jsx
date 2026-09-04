@@ -169,9 +169,10 @@ function MyOrdersPageContent() {
                                ({item.size?.startsWith('adult_') ? 'Adulte' : item.size?.startsWith('enfant_') ? 'Enfant' : 'Unique'})
                              </span>
                            </p>
-                           <p className="text-sm text-gray-600">
-                             {item.size?.replace(/^adult_|^enfant_/, '') || '-'} | {item.color} | Qté: {item.quantity}
-                          </p>
+                            <p className="text-sm text-gray-600">
+                              {item.size?.replace(/^adult_|^enfant_/, '') || '-'} | {item.color} | Qté: {item.quantity}
+                              {item.voilee && <span className="ml-2 text-purple-700 font-medium">🧕 Voilée</span>}
+                           </p>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-purple-600">

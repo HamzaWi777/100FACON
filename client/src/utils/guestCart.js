@@ -25,13 +25,13 @@ export function clearGuestCart() {
   localStorage.removeItem(GUEST_SESSION_ID_KEY);
 }
 
-export function addToGuestCart(product, quantity = 1, size = '', color = '', price = null) {
+export function addToGuestCart(product, quantity = 1, size = '', color = '', price = null, voilee = false) {
   const cart = getGuestCart();
   const itemPrice = price !== null ? price : product.price;
   
-  // Check if item already exists
+  // Check if item already exists (including voilee status)
   const existingItem = cart.find(
-    item => item.product_id === product.id && item.size === size && item.color === color
+    item => item.product_id === product.id && item.size === size && item.color === color && item.voilee === voilee
   );
   
   if (existingItem) {
@@ -46,6 +46,7 @@ export function addToGuestCart(product, quantity = 1, size = '', color = '', pri
       quantity,
       size,
       color,
+      voilee,
     });
   }
   

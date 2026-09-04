@@ -94,7 +94,7 @@ function MatchyMatchyForm({
   };
   const resizeSelections = (setter, selections, nextQuantity) => {
     const quantity = Math.max(1, Math.min(20, nextQuantity));
-    const fallback = selections[0] || { size: '', color: '' };
+    const fallback = selections[0] || { size: '', color: '', voilee: false };
     setter(Array.from({ length: quantity }, (_, index) => selections[index] || { ...fallback }));
   };
   const hasEnoughStock = (selections) => {
@@ -170,6 +170,24 @@ function MatchyMatchyForm({
             getStock={(color) => selection.size ? variants[`${selection.size}_${color}`] || 0 : 0}
             name={`Couleur adulte ${index + 1}`}
           />
+          {product.voilee && (
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => updateSelection(setAdultSelections, index, 'voilee', !selection.voilee)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                  selection.voilee ? 'bg-purple-600' : 'bg-gray-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                  selection.voilee ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+              <span className="text-sm font-medium text-gray-700">
+                {selection.voilee ? 'Voilée 🧕' : 'Normal'}
+              </span>
+            </div>
+          )}
         </div>
         ))}
 
@@ -272,7 +290,7 @@ export function ProductDetailPage() {
   const [lbVisible, setLbVisible] = useState(false);
   const [adultSize, setAdultSize] = useState('');
   const [adultColor, setAdultColor] = useState('');
-  const [adultSelections, setAdultSelections] = useState([{ size: '', color: '' }]);
+  const [adultSelections, setAdultSelections] = useState([{ size: '', color: '', voilee: false }]);
   const [enfantSize, setEnfantSize] = useState('');
   const [enfantColor, setEnfantColor] = useState('');
   const [enfantSelections, setEnfantSelections] = useState([{ size: '', color: '' }]);
@@ -297,7 +315,7 @@ export function ProductDetailPage() {
         if (data.is_matchy_matchy) {
           if (data.sizes?.length > 0) setAdultSize(data.sizes[0]);
           if (data.colors?.length > 0) setAdultColor(data.colors[0]);
-          setAdultSelections([{ size: data.sizes?.[0] || '', color: data.colors?.[0] || '' }]);
+          setAdultSelections([{ size: data.sizes?.[0] || '', color: data.colors?.[0] || '', voilee: false }]);
           if (data.enfant_sizes?.length > 0) setEnfantSize(data.enfant_sizes[0]);
           const enfantColors = data.enfant_colors || data.colors || [];
           const firstAvailEnfantColor = enfantColors.find(color => {
@@ -341,14 +359,14 @@ export function ProductDetailPage() {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'adulte');
           return;
         }
-        itemsToAdd.push(...adultSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'adulte' })));
+        itemsToAdd.push(...adultSelections.map(({ size, color, voilee }) => ({ size, color, quantity: 1, label: 'adulte', voilee: voilee ? true : false })));
       }
       if (mode === 'enfant' || mode === 'both') {
         if (!hasEnoughStock(enfantSelections)) {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'enfant');
           return;
         }
-        itemsToAdd.push(...enfantSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'enfant' })));
+        itemsToAdd.push(...enfantSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'enfant', voilee: false })));
       }
       if (itemsToAdd.length === 0) {
         toast.error('Veuillez sélectionner au moins une taille/couleur disponible');
@@ -361,12 +379,13 @@ export function ProductDetailPage() {
           size: item.size,
           color: item.color,
           price: item.label === 'adulte' ? product.price : (product.enfant_price || product.price),
+          voilee: item.voilee || false,
         }));
         if (isAuthenticated) {
           await cartService.addItemsToCart(cartItems);
         } else {
           getOrCreateGuestSessionId();
-          cartItems.forEach((item) => addToGuestCart(product, item.quantity, item.size, item.color, item.price));
+          cartItems.forEach((item) => addToGuestCart(product, item.quantity, item.size, item.color, item.price, item.voilee));
         }
         trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity: itemsToAdd.reduce((s, i) => s + i.quantity, 0) });
         toast.success('Article(s) ajouté(s) au panier');
@@ -472,42 +491,21 @@ export function ProductDetailPage() {
     if (imageIndex >= 0) pageCarousel.setIndex(imageIndex);
   };
 
-  // Keep the ordered color list and ordered image list synchronized in both directions.
+  // Auto-select first image when first color is selected for MM products
   useEffect(() => {
-    if (!product?.images?.length) return;
-    if (carouselSyncSource.current === 'color') {
-      carouselSyncSource.current = null;
-      return;
+    if (!product?.images?.length || !isMM) return;
+    const adultColors = product.colors || [];
+    const enfantColors = product.enfant_colors || product.colors || [];
+    const adultIndex = imageIndexForColor(adultColors, adultColor);
+    const enfantIndex = imageIndexForColor(enfantColors, enfantColor);
+    if (adultIndex >= 0 && pageCarousel.index !== adultIndex && selectionMode !== 'enfant') {
+      pageCarousel.setIndex(adultIndex);
+    } else if (enfantIndex >= 0 && pageCarousel.index !== enfantIndex && selectionMode === 'enfant') {
+      pageCarousel.setIndex(enfantIndex);
     }
+  }, [adultColor, enfantColor, isMM, product, selectionMode]);
 
-    const colors = isMM
-      ? selectionMode === 'enfant' ? (product.enfant_colors || product.colors || []) : (product.colors || [])
-      : product.colors || [];
-    const color = isMM
-      ? selectionMode === 'enfant' ? enfantColor : adultColor
-      : selectedColor;
-    if (colors[pageCarousel.index] && colors[pageCarousel.index] !== color) {
-      if (isMM) {
-        if (selectionMode === 'enfant') {
-          setEnfantColor(colors[pageCarousel.index]);
-          setEnfantSelections((selections) => selections.length
-            ? [{ ...selections[0], color: colors[pageCarousel.index] }, ...selections.slice(1)]
-            : selections);
-        } else {
-          setAdultColor(colors[pageCarousel.index]);
-          setAdultSelections((selections) => selections.length
-            ? [{ ...selections[0], color: colors[pageCarousel.index] }, ...selections.slice(1)]
-            : selections);
-        }
-      } else {
-        setSelectedColor(colors[pageCarousel.index]);
-        setSelectionRows((rows) => rows.length
-          ? [{ ...rows[0], color: colors[pageCarousel.index] }, ...rows.slice(1)]
-          : rows);
-      }
-    }
-  }, [pageCarousel.index, product, isMM, selectionMode, adultColor, enfantColor, selectedColor]);
-
+  // Keep color → image synchronized (selecting a color changes the image).
   useEffect(() => {
     if (!product?.images?.length) return;
     const colors = isMM
@@ -561,11 +559,11 @@ export function ProductDetailPage() {
       const selections = [];
       if (selectionMode === 'adult' || selectionMode === 'both') {
         if (!hasEnoughStock(adultSelections)) return null;
-        selections.push(...adultSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.price })));
+        selections.push(...adultSelections.map(({ size, color, voilee }) => ({ product_id: product.id, quantity: 1, size, color, price: product.price, voilee: voilee || false })));
       }
       if (selectionMode === 'enfant' || selectionMode === 'both') {
         if (!hasEnoughStock(enfantSelections)) return null;
-        selections.push(...enfantSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.enfant_price || product.price })));
+        selections.push(...enfantSelections.map(({ size, color }) => ({ product_id: product.id, quantity: 1, size, color, price: product.enfant_price || product.price, voilee: false })));
       }
       return selections.length ? selections : null;
     }

@@ -18,7 +18,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false });
   const [variantStock, setVariantStock] = useState({});
   const [images, setImages] = useState([]);
 
@@ -101,6 +101,7 @@ export function AdminProducts() {
     fd.append('enfantSizes', JSON.stringify(isMatchy ? enfantSizes : []));
     fd.append('enfantColors', JSON.stringify(isMatchy ? enfantColors : []));
     fd.append('variantStock', JSON.stringify(submittedVariantStock));
+    fd.append('voilee', isMatchy ? (formData.voilee ? '1' : '0') : '0');
     images.forEach((image) => fd.append('images', image.file));
     try {
       if (editingId) {
@@ -129,6 +130,7 @@ export function AdminProducts() {
       colors: product.colors || [],
       enfantColors: product.enfant_colors || [],
       isMatchyMatchy: isMatchy,
+      voilee: product.voilee || false,
     });
     setVariantStock(product.variants || {});
     setImages([]);
@@ -242,6 +244,27 @@ export function AdminProducts() {
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs enfant</label>
                   <ColorPalette selectedColors={formData.enfantColors} onToggle={(color) => toggleColor('enfantColors', color)} name="Couleurs enfant" />
+                </div>
+              </div>
+            )}
+
+            {/* Matchy Matchy: Voilée toggle */}
+            {isMM && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Option voilée pour les adultes</label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData((current) => ({ ...current, voilee: !current.voilee }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                      formData.voilee ? 'bg-purple-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                      formData.voilee ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                  <span className="text-sm text-gray-700">{formData.voilee ? 'Activée — les clients pourront choisir une version voilée pour les adultes' : 'Désactivée — pas d’option voilée'}</span>
                 </div>
               </div>
             )}
