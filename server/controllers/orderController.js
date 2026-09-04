@@ -42,16 +42,16 @@ export async function createOrder(req, res) {
 
     const requestedVariants = cartItems.reduce((requested, item) => {
       if (item.size && item.color) {
-        const key = `${item.product_id}:${item.size}:${item.color}`;
+        const key = `${item.product_id}:${item.size}:${item.color}:${item.voilee ? 1 : 0}`;
         requested[key] = (requested[key] || 0) + item.quantity;
       }
       return requested;
     }, {});
     for (const [key, requestedQuantity] of Object.entries(requestedVariants)) {
-      const [productId, size, color] = key.split(':');
+      const [productId, size, color, voilee] = key.split(':');
       const [variant] = await pool.query(
-        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
-        [productId, size, color]
+        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? AND voilee = ?',
+        [productId, size, color, voilee]
       );
       if (!variant[0] || variant[0].stock < requestedQuantity) {
         return res.status(400).json({ error: 'Insufficient variant stock' });
@@ -80,15 +80,15 @@ for (const item of cartItems) {
   // Reduce variant-level stock (size + color specific)
   if (item.size && item.color) {
     const [variantResult] = await pool.query(
-      'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
-      [item.product_id, item.size, item.color]
+      'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? AND voilee = ?',
+      [item.product_id, item.size, item.color, item.voilee ? 1 : 0]
     );
     if (!variantResult[0] || variantResult[0].stock < item.quantity) {
       return res.status(400).json({ error: 'Insufficient variant stock' });
     }
     await pool.query(
-      'UPDATE product_variants SET stock = GREATEST(0, stock - ?) WHERE product_id = ? AND size = ? AND color = ?',
-      [item.quantity, item.product_id, item.size, item.color]
+      'UPDATE product_variants SET stock = GREATEST(0, stock - ?) WHERE product_id = ? AND size = ? AND color = ? AND voilee = ?',
+      [item.quantity, item.product_id, item.size, item.color, item.voilee ? 1 : 0]
     );
   }
 

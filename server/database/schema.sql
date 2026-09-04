@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS products (
   enfant_sizes JSON,
   is_featured BOOLEAN DEFAULT FALSE,
   voilee TINYINT(1) DEFAULT 0,
+  voilee_price DECIMAL(10, 2),
+  voilee_sizes JSON,
+  voilee_colors JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_category (category),
   INDEX idx_is_featured (is_featured),
@@ -40,6 +43,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   size VARCHAR(20),
   color VARCHAR(50),
   stock INT DEFAULT 0,
+  voilee TINYINT(1) DEFAULT 0,
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
   INDEX idx_product_id (product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

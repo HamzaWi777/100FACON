@@ -32,6 +32,10 @@ export async function initializeDatabase() {
       'ALTER TABLE products ADD COLUMN voilee TINYINT(1) DEFAULT 0',
       'ALTER TABLE cart ADD COLUMN voilee TINYINT(1) DEFAULT 0',
       'ALTER TABLE order_items ADD COLUMN voilee TINYINT(1) DEFAULT 0',
+      'ALTER TABLE products ADD COLUMN voilee_price DECIMAL(10,2)',
+      'ALTER TABLE products ADD COLUMN voilee_sizes JSON',
+      'ALTER TABLE products ADD COLUMN voilee_colors JSON',
+      'ALTER TABLE product_variants ADD COLUMN voilee TINYINT(1) DEFAULT 0',
     ];
     // Backfill price for existing cart rows
     migrations.push('UPDATE cart c JOIN products p ON c.product_id = p.id SET c.price = p.price WHERE c.price IS NULL');

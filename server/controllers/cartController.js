@@ -58,8 +58,8 @@ export async function addToCart(req, res) {
     let variantResult = [];
     if (size && color) {
       [variantResult] = await pool.query(
-        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ?',
-        [product_id, size, color]
+        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? AND voilee = ?',
+        [product_id, size, color, voilee ? 1 : 0]
       );
       if (!variantResult[0] || variantResult[0].stock < quantity) {
         return res.status(400).json({ error: 'Insufficient variant stock' });
@@ -122,8 +122,8 @@ export async function addItemsToCart(req, res) {
     for (const [key, requestedQuantity] of Object.entries(requested)) {
       const [productId, size, color, voilee] = key.split(':');
       const [variants] = await connection.query(
-        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? FOR UPDATE',
-        [productId, size, color]
+        'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? AND voilee = ? FOR UPDATE',
+        [productId, size, color, voilee]
       );
       const [cartQuantity] = await connection.query(
         'SELECT COALESCE(SUM(quantity), 0) AS quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? AND voilee = ? FOR UPDATE',
@@ -172,7 +172,7 @@ export async function updateCartItem(req, res) {
 
     const [cartItems] = await pool.query(
       `SELECT c.*, p.stock,
-       (SELECT stock FROM product_variants pv WHERE pv.product_id = p.id AND pv.size = c.size AND pv.color = c.color) as variant_stock
+       (SELECT stock FROM product_variants pv WHERE pv.product_id = p.id AND pv.size = c.size AND pv.color = c.color AND pv.voilee = c.voilee) as variant_stock
        FROM cart c JOIN products p ON c.product_id = p.id WHERE c.id = ? AND c.user_id = ?`,
       [id, userId]
     );

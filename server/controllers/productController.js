@@ -3,7 +3,7 @@ import cloudinary from '../config/cloudinary.js';
 
 function parseVariantKey(key) {
   const parts = key.split('_');
-  if (parts[0] === 'adult' || parts[0] === 'enfant') {
+  if (parts[0] === 'adult' || parts[0] === 'enfant' || parts[0] === 'voilee') {
     return { variantType: parts[0], size: `${parts[0]}_${parts[1]}`, color: parts.slice(2).join('_') };
   }
   return { variantType: 'adult', size: parts[0], color: parts.slice(1).join('_') };
@@ -15,15 +15,19 @@ function safeParseJSON(value, fallback) {
   catch { return fallback; }
 }
 
-function filterVariantStock(variantStock, sizes, colors, enfantSizes, enfantColors, isMatchyProduct) {
+function filterVariantStock(variantStock, sizes, colors, enfantSizes, enfantColors, isMatchyProduct, voileeSizes = [], voileeColors = [], voileeEnabled = false) {
   const validKeys = new Set([
     ...(isMatchyProduct ? enfantSizes : []).flatMap(size => enfantColors.map(color => `${size}_${color}`)),
     ...sizes.flatMap(size => colors.map(color => `${size}_${color}`)),
+    ...(isMatchyProduct && voileeEnabled ? voileeSizes.flatMap(size => voileeColors.map(color => `${size}_${color}`)) : []),
   ]);
   return Object.fromEntries(Object.entries(variantStock).filter(([key]) => validKeys.has(key)));
 }
 
-function isValidVariant(variant, sizes, colors, enfantSizes, enfantColors, isMatchyProduct) {
+function isValidVariant(variant, sizes, colors, enfantSizes, enfantColors, isMatchyProduct, voileeSizes = [], voileeColors = [], voileeEnabled = false) {
+  if (isMatchyProduct && variant.size?.startsWith('voilee_') && voileeEnabled) {
+    return voileeSizes.includes(variant.size) && voileeColors.includes(variant.color);
+  }
   const isEnfantVariant = isMatchyProduct && variant.size?.startsWith('enfant_');
   const validSizes = isEnfantVariant ? enfantSizes : sizes;
   const validColors = isEnfantVariant ? enfantColors : colors;
@@ -190,6 +194,9 @@ export async function getAllProducts(req, res) {
       enfant_price: p.enfant_price ? parseFloat(p.enfant_price) : null,
       is_matchy_matchy: p.is_matchy_matchy ? p.is_matchy_matchy === 1 : false,
       voilee: p.voilee ? p.voilee === 1 : false,
+      voilee_price: p.voilee_price ? parseFloat(p.voilee_price) : null,
+      voilee_sizes: safeParseJSON(p.voilee_sizes, []),
+      voilee_colors: safeParseJSON(p.voilee_colors, []),
       enfant_sizes: enfantSizes,
       enfant_colors: enfantColors,
       images,
@@ -285,6 +292,9 @@ export async function getProductById(req, res) {
       enfant_price: product.enfant_price ? parseFloat(product.enfant_price) : null,
       is_matchy_matchy: product.is_matchy_matchy ? product.is_matchy_matchy === 1 : false,
       voilee: product.voilee ? product.voilee === 1 : false,
+      voilee_price: product.voilee_price ? parseFloat(product.voilee_price) : null,
+      voilee_sizes: safeParseJSON(product.voilee_sizes, []),
+      voilee_colors: safeParseJSON(product.voilee_colors, []),
       enfant_sizes: enfantSizes,
       enfant_colors: enfantColors,
       images,
@@ -299,7 +309,7 @@ export async function getProductById(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes, voilee } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes, voilee, voileePrice, voileeSizes, voileeColors } = req.body;
     const isMatchyProduct = category === 'matchy_matchy';
 
     let parsedVariantStock = {};
@@ -327,6 +337,24 @@ export async function createProduct(req, res) {
         parsedEnfantColors = typeof enfantColors === 'string' ? JSON.parse(enfantColors) : enfantColors;
       } catch (e) {
         parsedEnfantColors = [];
+      }
+    }
+
+    let parsedVoileeSizes = [];
+    if (voileeSizes && isMatchyProduct && voilee) {
+      try {
+        parsedVoileeSizes = typeof voileeSizes === 'string' ? JSON.parse(voileeSizes) : voileeSizes;
+      } catch (e) {
+        parsedVoileeSizes = [];
+      }
+    }
+
+    let parsedVoileeColors = [];
+    if (voileeColors && isMatchyProduct && voilee) {
+      try {
+        parsedVoileeColors = typeof voileeColors === 'string' ? JSON.parse(voileeColors) : voileeColors;
+      } catch (e) {
+        parsedVoileeColors = [];
       }
     }
 
@@ -378,7 +406,10 @@ export async function createProduct(req, res) {
       safeParseJSON(colors, []),
       parsedEnfantSizes,
       parsedEnfantColors,
-      isMatchyProduct
+      isMatchyProduct,
+      parsedVoileeSizes,
+      parsedVoileeColors,
+      isMatchyProduct && voilee
     );
 
     let totalStock = 0;
@@ -387,7 +418,7 @@ export async function createProduct(req, res) {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO products (name, description, price, enfant_price, category, stock, images, sizes, colors, enfant_colors, is_matchy_matchy, enfant_sizes, voilee) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO products (name, description, price, enfant_price, category, stock, images, sizes, colors, enfant_colors, is_matchy_matchy, enfant_sizes, voilee, voilee_price, voilee_sizes, voilee_colors) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         name,
         description,
@@ -402,6 +433,9 @@ export async function createProduct(req, res) {
         isMatchyProduct ? 1 : 0,
         JSON.stringify(isMatchyProduct ? parsedEnfantSizes : []),
         isMatchyProduct ? (voilee ? 1 : 0) : 0,
+        isMatchyProduct && voilee ? (voileePrice || null) : null,
+        JSON.stringify(isMatchyProduct && voilee ? parsedVoileeSizes : []),
+        JSON.stringify(isMatchyProduct && voilee ? parsedVoileeColors : []),
       ]
     );
 
@@ -410,9 +444,10 @@ export async function createProduct(req, res) {
     if (parsedVariantStock && typeof parsedVariantStock === 'object') {
       for (const [key, stock] of Object.entries(parsedVariantStock)) {
         const { size, color } = parseVariantKey(key);
+        const isVoileeVariant = key.startsWith('voilee_') || (isMatchyProduct && voilee && size && size.startsWith('voilee_'));
         await pool.query(
-          'INSERT INTO product_variants (product_id, size, color, stock) VALUES (?, ?, ?, ?)',
-          [productId, size || null, color || null, parseInt(stock) || 0]
+          'INSERT INTO product_variants (product_id, size, color, stock, voilee) VALUES (?, ?, ?, ?, ?)',
+          [productId, size || null, color || null, parseInt(stock) || 0, isVoileeVariant ? 1 : 0]
         );
       }
     }
@@ -421,7 +456,7 @@ export async function createProduct(req, res) {
       message: 'Product created successfully',
       id: productId,
     });
-    } catch (error) {
+  } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ error: error.message });
   }
@@ -430,7 +465,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes, voilee } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes, voilee, voileePrice, voileeSizes, voileeColors } = req.body;
     const isMatchyProduct = category === 'matchy_matchy';
 
     const [products] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
@@ -484,6 +519,36 @@ export async function updateProduct(req, res) {
       }
     }
 
+    let parsedVoileeSizes = [];
+    if (voileeSizes && isMatchyProduct && voilee) {
+      try {
+        parsedVoileeSizes = typeof voileeSizes === 'string' ? JSON.parse(voileeSizes) : voileeSizes;
+      } catch (e) {
+        parsedVoileeSizes = [];
+      }
+    } else if (isMatchyProduct && products[0].voilee_sizes) {
+      try {
+        parsedVoileeSizes = typeof products[0].voilee_sizes === 'string' ? JSON.parse(products[0].voilee_sizes) : products[0].voilee_sizes;
+      } catch (e) {
+        parsedVoileeSizes = [];
+      }
+    }
+
+    let parsedVoileeColors = [];
+    if (voileeColors && isMatchyProduct && voilee) {
+      try {
+        parsedVoileeColors = typeof voileeColors === 'string' ? JSON.parse(voileeColors) : voileeColors;
+      } catch (e) {
+        parsedVoileeColors = [];
+      }
+    } else if (isMatchyProduct && products[0].voilee_colors) {
+      try {
+        parsedVoileeColors = typeof products[0].voilee_colors === 'string' ? JSON.parse(products[0].voilee_colors) : products[0].voilee_colors;
+      } catch (e) {
+        parsedVoileeColors = [];
+      }
+    }
+
     let parsedColors = [];
     if (colors) {
       try {
@@ -508,7 +573,10 @@ export async function updateProduct(req, res) {
       safeParseJSON(colors, []),
       parsedEnfantSizes,
       parsedEnfantColors,
-      isMatchyProduct
+      isMatchyProduct,
+      parsedVoileeSizes,
+      parsedVoileeColors,
+      isMatchyProduct && voilee
     );
 
     let existingImages = [];
@@ -558,7 +626,7 @@ export async function updateProduct(req, res) {
     }
 
     await pool.query(
-      'UPDATE products SET name = ?, description = ?, price = ?, enfant_price = ?, category = ?, stock = ?, images = ?, sizes = ?, colors = ?, enfant_colors = ?, is_matchy_matchy = ?, enfant_sizes = ?, voilee = ? WHERE id = ?',
+      'UPDATE products SET name = ?, description = ?, price = ?, enfant_price = ?, category = ?, stock = ?, images = ?, sizes = ?, colors = ?, enfant_colors = ?, is_matchy_matchy = ?, enfant_sizes = ?, voilee = ?, voilee_price = ?, voilee_sizes = ?, voilee_colors = ? WHERE id = ?',
       [
         name,
         description,
@@ -573,6 +641,9 @@ export async function updateProduct(req, res) {
         isMatchyProduct ? 1 : 0,
         JSON.stringify(isMatchyProduct ? parsedEnfantSizes : []),
         isMatchyProduct ? (voilee ? 1 : 0) : 0,
+        isMatchyProduct && voilee ? (voileePrice || null) : null,
+        JSON.stringify(isMatchyProduct && voilee ? parsedVoileeSizes : []),
+        JSON.stringify(isMatchyProduct && voilee ? parsedVoileeColors : []),
         id,
       ]
     );
@@ -583,9 +654,10 @@ export async function updateProduct(req, res) {
     if (parsedVariantStock && typeof parsedVariantStock === 'object') {
       for (const [key, stock] of Object.entries(parsedVariantStock)) {
         const { size, color } = parseVariantKey(key);
+        const isVoileeVariant = key.startsWith('voilee_') || (isMatchyProduct && voilee && size && size.startsWith('voilee_'));
         await pool.query(
-          'INSERT INTO product_variants (product_id, size, color, stock) VALUES (?, ?, ?, ?)',
-          [id, size || null, color || null, parseInt(stock) || 0]
+          'INSERT INTO product_variants (product_id, size, color, stock, voilee) VALUES (?, ?, ?, ?, ?)',
+          [id, size || null, color || null, parseInt(stock) || 0, isVoileeVariant ? 1 : 0]
         );
       }
     }
