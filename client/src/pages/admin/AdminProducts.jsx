@@ -78,7 +78,7 @@ export function AdminProducts() {
     const isMatchy = formData.category === 'matchy_matchy';
     const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
     const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
-    const voileeSizes = isMatchy && formData.voilee ? (formData.voileeSizes || prefixedSizes('voilee_', DEFAULT_SIZES)) : [];
+    const voileeSizes = isMatchy && formData.voilee ? (formData.voileeSizes && formData.voileeSizes.length > 0 ? formData.voileeSizes : prefixedSizes('voilee_', DEFAULT_SIZES)) : [];
     const activeVariantKeys = isMatchy
       ? [
         ...adultSizes.flatMap(size => colors.map(color => `${size}_${color}`)),
@@ -125,6 +125,8 @@ export function AdminProducts() {
 
   const handleEdit = (product) => {
     const isMatchy = product.is_matchy_matchy || product.category === 'matchy_matchy';
+    const voileeSizes = product.voilee_sizes && product.voilee_sizes.length > 0 ? product.voilee_sizes : (product.voilee ? prefixedSizes('voilee_', DEFAULT_SIZES) : []);
+    const voileeColors = product.voilee_colors && product.voilee_colors.length > 0 ? product.voilee_colors : (product.voilee ? product.colors || [] : []);
     setEditingId(product.id);
     setFormData({
       name: product.name,
@@ -137,8 +139,8 @@ export function AdminProducts() {
       isMatchyMatchy: isMatchy,
       voilee: product.voilee || false,
       voileePrice: product.voilee_price || '',
-      voileeColors: product.voilee_colors || [],
-      voileeSizes: product.voilee_sizes || [],
+      voileeColors: voileeColors,
+      voileeSizes: voileeSizes,
     });
     setVariantStock(product.variants || {});
     setImages([]);
