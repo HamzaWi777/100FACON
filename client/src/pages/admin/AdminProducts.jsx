@@ -245,27 +245,7 @@ export function AdminProducts() {
             {isMM && (
               <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <label className="block text-sm font-medium text-gray-900 mb-3">Tailles adulte</label>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {adultActiveSizes.map(size => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => {
-                        const newSizes = formData.sizes?.includes(size)
-                          ? formData.sizes.filter(s => s !== size)
-                          : [...(formData.sizes || adultActiveSizes), size];
-                        setFormData({ ...formData, sizes: newSizes });
-                      }}
-                      className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                        formData.sizes?.includes(size) || (!formData.sizes && adultActiveSizes.includes(size))
-                          ? 'border-purple-600 bg-purple-700 text-white'
-                          : 'border-purple-200 text-gray-900 hover:border-purple-400'
-                      }`}
-                    >
-                      {size.replace(ADULT_SIZE_PREFIX, '')}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-sm text-gray-600 mb-4">Tailles disponibles : {adultActiveSizes.map(s => s.replace(ADULT_SIZE_PREFIX, '')).join(', ')}</p>
 
                 <label className="block text-sm font-medium text-gray-900 mb-3">Stock adulte par taille et couleur</label>
                 <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
@@ -334,30 +314,7 @@ export function AdminProducts() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-3">Tailles voilée</label>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {adultActiveSizes.map(size => {
-                          const voileeSize = size.replace(ADULT_SIZE_PREFIX, 'voilee_');
-                          return (
-                            <button
-                              key={voileeSize}
-                              type="button"
-                              onClick={() => {
-                                const newVoileeSizes = formData.voileeSizes?.includes(voileeSize)
-                                  ? formData.voileeSizes.filter(s => s !== voileeSize)
-                                  : [...(formData.voileeSizes || adultActiveSizes.map(s => s.replace(ADULT_SIZE_PREFIX, 'voilee_'))), voileeSize];
-                                setFormData({ ...formData, voileeSizes: newVoileeSizes });
-                              }}
-                              className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                                formData.voileeSizes?.includes(voileeSize) || (!formData.voileeSizes && adultActiveSizes.some(s => s.replace(ADULT_SIZE_PREFIX, 'voilee_') === voileeSize))
-                                  ? 'border-purple-600 bg-purple-700 text-white'
-                                  : 'border-purple-200 text-gray-900 hover:border-purple-400'
-                              }`}
-                            >
-                              {size.replace(ADULT_SIZE_PREFIX, '')}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Tailles disponibles : {adultActiveSizes.map(s => s.replace(ADULT_SIZE_PREFIX, '')).join(', ')}</p>
                     </div>
 
                     <label className="block text-sm font-medium text-gray-900 mb-3">Stock voilée par taille et couleur</label>
@@ -417,27 +374,7 @@ export function AdminProducts() {
 
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-900 mb-3">Tailles enfant</label>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {enfantActiveSizes.map(size => (
-                      <button
-                        key={size}
-                        type="button"
-                        onClick={() => {
-                          const newSizes = formData.enfantSizes?.includes(size)
-                            ? formData.enfantSizes.filter(s => s !== size)
-                            : [...(formData.enfantSizes || enfantActiveSizes), size];
-                          setFormData({ ...formData, enfantSizes: newSizes });
-                        }}
-                        className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
-                          formData.enfantSizes?.includes(size) || (!formData.enfantSizes && enfantActiveSizes.includes(size))
-                            ? 'border-pink-600 bg-pink-700 text-white'
-                            : 'border-pink-200 text-gray-900 hover:border-pink-400'
-                        }`}
-                      >
-                        {size.replace(ENFANT_SIZE_PREFIX, '')}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="text-sm text-gray-600 mb-4">Tailles disponibles : {enfantActiveSizes.map(s => s.replace(ENFANT_SIZE_PREFIX, '')).join(', ')}</p>
                 </div>
 
                 <div>
@@ -470,6 +407,41 @@ export function AdminProducts() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Non-Matchy Matchy: Stock par taille et couleur */}
+            {!isMM && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">Stock par taille et couleur</label>
+                <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
+                  <table className="w-full min-w-max">
+                    <thead>
+                      <tr className="bg-purple-100 border-b-2 border-purple-200">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille</th>
+                        {displayColors.map(color => (
+                          <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeSizes.map(size => (
+                        <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
+                          <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size}</td>
+                          {displayColors.map(color => (
+                            <td key={`${size}-${color}`} className="px-4 py-2">
+                              <input type="number" min="0"
+                                value={variantStock[`${size}_${color}`] || ''}
+                                onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
+                                placeholder="0"
+                                className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
