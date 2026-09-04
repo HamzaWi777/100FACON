@@ -85,6 +85,7 @@ function MatchyMatchyForm({
   adultSelections, setAdultSelections,
   enfantSelections, setEnfantSelections,
   selectionMode, setSelectionMode,
+  selectColorAndImage,
 }) {
   const variants = product.variants || {};
   const updateSelection = (setter, index, field, value) => {
@@ -874,6 +875,7 @@ export function ProductDetailPage() {
               enfantSelections={enfantSelections} setEnfantSelections={setEnfantSelections}
               selectionMode={selectionMode}
               setSelectionMode={setSelectionMode}
+              selectColorAndImage={selectColorAndImage}
             />
           ) : (
           <div className="space-y-4 mb-5">
