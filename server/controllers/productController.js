@@ -183,8 +183,12 @@ export async function getAllProducts(req, res) {
     const voileeColors = safeParseJSON(p.voilee_colors, []);
     const voileeEnabled = p.voilee === 1;
 
+    // If voilee is enabled but sizes/colors are empty, default to adult sizes/colors with voilee_ prefix
+    const effectiveVoileeSizes = voileeEnabled && voileeSizes.length === 0 ? sizes.map(s => s.replace(/^adult_/, 'voilee_')) : voileeSizes;
+    const effectiveVoileeColors = voileeEnabled && voileeColors.length === 0 ? colors : voileeColors;
+
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [p.id]);
-    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, p.is_matchy_matchy === 1, voileeSizes, voileeColors, voileeEnabled));
+    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, p.is_matchy_matchy === 1, effectiveVoileeSizes, effectiveVoileeColors, voileeEnabled));
     const variantStock = {};
     validVariants.forEach(v => {
       const key = `${v.size || 'none'}_${v.color || 'none'}`;
@@ -284,9 +288,13 @@ export async function getProductById(req, res) {
     const voileeColors = safeParseJSON(product.voilee_colors, []);
     const voileeEnabled = product.voilee === 1;
 
+    // If voilee is enabled but sizes/colors are empty, default to adult sizes/colors with voilee_ prefix
+    const effectiveVoileeSizes = voileeEnabled && voileeSizes.length === 0 ? sizes.map(s => s.replace(/^adult_/, 'voilee_')) : voileeSizes;
+    const effectiveVoileeColors = voileeEnabled && voileeColors.length === 0 ? colors : voileeColors;
+
     // Fetch variants for this product
     const [variants] = await pool.query('SELECT * FROM product_variants WHERE product_id = ?', [id]);
-    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, product.is_matchy_matchy === 1, voileeSizes, voileeColors, voileeEnabled));
+    const validVariants = variants.filter(v => isValidVariant(v, sizes, colors, enfantSizes, enfantColors, product.is_matchy_matchy === 1, effectiveVoileeSizes, effectiveVoileeColors, voileeEnabled));
     const variantStock = {};
     validVariants.forEach(v => {
       const key = `${v.size || 'none'}_${v.color || 'none'}`;
