@@ -172,7 +172,7 @@ function MatchyMatchyForm({
           <ColorSwatches
             colors={product.colors}
             value={selection.color}
-            onChange={(color) => { updateSelection(setAdultSelections, index, 'color', color); selectColorAndImage(color, product.colors, setAdultColor); }}
+            onChange={(color) => { updateSelection(setAdultSelections, index, 'color', color); selectColorAndImage(color, product.colors, setAdultColor, 'adult'); }}
             getStock={(color) => {
               if (!selection.size) return 0;
               if (selection.voilee && selection.size.startsWith('adult_')) {
@@ -252,7 +252,7 @@ function MatchyMatchyForm({
           <ColorSwatches
             colors={product.enfant_colors || product.colors}
             value={selection.color}
-            onChange={(color) => { updateSelection(setEnfantSelections, index, 'color', color); selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor); }}
+            onChange={(color) => { updateSelection(setEnfantSelections, index, 'color', color); selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor, 'enfant'); }}
             getStock={(color) => selection.size ? variants[`${selection.size}_${color}`] || 0 : 0}
             name={`Couleur enfant ${index + 1}`}
           />
@@ -325,6 +325,7 @@ export function ProductDetailPage() {
   const pageCarousel = useSwipeCarousel(product?.images?.length || 0);
   const lightboxCarousel = useSwipeCarousel(product?.images?.length || 0);
   const carouselSyncSource = useRef(null);
+  const lastColorChangeSource = useRef('adult');
   const isMM = product?.is_matchy_matchy;
 
   useEffect(() => { fetchProduct(); }, [id]);
@@ -511,7 +512,8 @@ export function ProductDetailPage() {
     return index >= 0 && index < (product?.images?.length || 0) ? index : -1;
   };
 
-  const selectColorAndImage = (color, colors, setColor) => {
+  const selectColorAndImage = (color, colors, setColor, source = 'adult') => {
+    lastColorChangeSource.current = source;
     const imageIndex = imageIndexForColor(colors, color);
     carouselSyncSource.current = imageIndex === pageCarousel.index ? null : 'color';
     setColor(color);
@@ -521,6 +523,19 @@ export function ProductDetailPage() {
   // Keep color → image synchronized (selecting a color changes the image).
   useEffect(() => {
     if (!product?.images?.length) return;
+
+    if (isMM && selectionMode === 'both') {
+      const adultIndex = imageIndexForColor(product.colors || [], adultColor);
+      const enfantIndex = imageIndexForColor(product.enfant_colors || product.colors || [], enfantColor);
+
+      if (lastColorChangeSource.current === 'enfant' && enfantIndex >= 0) {
+        pageCarousel.setIndex(enfantIndex);
+      } else if (adultIndex >= 0) {
+        pageCarousel.setIndex(adultIndex);
+      }
+      return;
+    }
+
     const colors = isMM
       ? selectionMode === 'enfant' ? (product.enfant_colors || product.colors || []) : (product.colors || [])
       : product.colors || [];
