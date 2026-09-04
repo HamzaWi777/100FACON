@@ -517,20 +517,6 @@ export function ProductDetailPage() {
     if (imageIndex >= 0) pageCarousel.setIndex(imageIndex);
   };
 
-  // Auto-select first image when first color is selected for MM products
-  useEffect(() => {
-    if (!product?.images?.length || !isMM) return;
-    const adultColors = product.colors || [];
-    const enfantColors = product.enfant_colors || product.colors || [];
-    const adultIndex = imageIndexForColor(adultColors, adultColor);
-    const enfantIndex = imageIndexForColor(enfantColors, enfantColor);
-    if (adultIndex >= 0 && pageCarousel.index !== adultIndex && selectionMode !== 'enfant') {
-      pageCarousel.setIndex(adultIndex);
-    } else if (enfantIndex >= 0 && pageCarousel.index !== enfantIndex && selectionMode === 'enfant') {
-      pageCarousel.setIndex(enfantIndex);
-    }
-  }, [adultColor, enfantColor, isMM, product, selectionMode]);
-
   // Keep color → image synchronized (selecting a color changes the image).
   useEffect(() => {
     if (!product?.images?.length) return;
@@ -541,7 +527,7 @@ export function ProductDetailPage() {
       ? selectionMode === 'enfant' ? enfantColor : adultColor
       : selectedColor;
     const imageIndex = imageIndexForColor(colors, color);
-    if (imageIndex >= 0 && imageIndex !== pageCarousel.index) {
+    if (imageIndex >= 0) {
       carouselSyncSource.current = 'color';
       pageCarousel.setIndex(imageIndex);
     }
