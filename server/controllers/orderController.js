@@ -73,8 +73,8 @@ export async function createOrder(req, res) {
     // Create order items and reduce product stock
 for (const item of cartItems) {
   await pool.query(
-    'INSERT INTO order_items (order_id, product_id, quantity, size, color, price) VALUES (?, ?, ?, ?, ?, ?)',
-    [orderId, item.product_id, item.quantity, item.size, item.color, item.price]
+    'INSERT INTO order_items (order_id, product_id, quantity, size, color, price, voilee) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [orderId, item.product_id, item.quantity, item.size, item.color, item.price, item.voilee ? 1 : 0]
   );
 
   // Reduce variant-level stock (size + color specific)
@@ -178,6 +178,7 @@ export async function getOrderById(req, res) {
           ? JSON.parse(item.images)
           : [item.images]
       ) : [],
+      voilee: item.voilee ? item.voilee === 1 : false,
     }));
 
     res.json({
@@ -220,7 +221,7 @@ export async function getAllOrders(req, res) {
         );
         return {
           ...order,
-          items: items,
+          items: items.map(item => ({ ...item, voilee: item.voilee ? item.voilee === 1 : false })),
           itemsCount: items.length,
           customerName: order.full_name || order.guest_name || 'Guest',
           customerEmail: order.email || order.guest_email || 'N/A'

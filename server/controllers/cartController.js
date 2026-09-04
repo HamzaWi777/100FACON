@@ -32,6 +32,7 @@ export async function getCart(req, res) {
         ...item,
         price: item.price != null ? parseFloat(item.price) : (item.product_price ? parseFloat(item.product_price) : 0),
         images,
+        voilee: item.voilee ? item.voilee === 1 : false,
       };
     });
 
@@ -45,7 +46,7 @@ export async function getCart(req, res) {
 export async function addToCart(req, res) {
   try {
     const userId = req.user.id;
-    const { product_id, quantity, size, color, price } = req.body;
+    const { product_id, quantity, size, color, price, voilee } = req.body;
 
     const [products] = await pool.query('SELECT stock FROM products WHERE id = ?', [product_id]);
     if (products.length === 0) {
@@ -69,8 +70,8 @@ export async function addToCart(req, res) {
 
     // Check if item already in cart
     const [existingItems] = await pool.query(
-      'SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ?',
-      [userId, product_id, size, color]
+      'SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? AND voilee = ?',
+      [userId, product_id, size, color, voilee ? 1 : 0]
     );
 
     if (existingItems.length > 0) {
@@ -89,8 +90,8 @@ export async function addToCart(req, res) {
     } else {
       // Add new item
       await pool.query(
-        'INSERT INTO cart (user_id, product_id, quantity, size, color, price) VALUES (?, ?, ?, ?, ?, ?)',
-        [userId, product_id, quantity, size, color, price || null]
+        'INSERT INTO cart (user_id, product_id, quantity, size, color, price, voilee) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userId, product_id, quantity, size, color, price || null, voilee ? 1 : 0]
       );
     }
 
@@ -112,21 +113,21 @@ export async function addItemsToCart(req, res) {
     }
 
     const requested = items.reduce((counts, item) => {
-      const key = `${item.product_id}:${item.size}:${item.color}`;
+      const key = `${item.product_id}:${item.size}:${item.color}:${item.voilee ? 1 : 0}`;
       counts[key] = (counts[key] || 0) + item.quantity;
       return counts;
     }, {});
 
     await connection.beginTransaction();
     for (const [key, requestedQuantity] of Object.entries(requested)) {
-      const [productId, size, color] = key.split(':');
+      const [productId, size, color, voilee] = key.split(':');
       const [variants] = await connection.query(
         'SELECT stock FROM product_variants WHERE product_id = ? AND size = ? AND color = ? FOR UPDATE',
         [productId, size, color]
       );
       const [cartQuantity] = await connection.query(
-        'SELECT COALESCE(SUM(quantity), 0) AS quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? FOR UPDATE',
-        [userId, productId, size, color]
+        'SELECT COALESCE(SUM(quantity), 0) AS quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? AND voilee = ? FOR UPDATE',
+        [userId, productId, size, color, voilee]
       );
       const currentQuantity = Number(cartQuantity[0]?.quantity || 0);
       if (!variants[0] || variants[0].stock < currentQuantity + requestedQuantity) {
@@ -137,15 +138,15 @@ export async function addItemsToCart(req, res) {
 
     for (const item of items) {
       const [existing] = await connection.query(
-        'SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? FOR UPDATE',
-        [userId, item.product_id, item.size, item.color]
+        'SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND size = ? AND color = ? AND voilee = ? FOR UPDATE',
+        [userId, item.product_id, item.size, item.color, item.voilee ? 1 : 0]
       );
       if (existing.length > 0) {
         await connection.query('UPDATE cart SET quantity = ?, price = COALESCE(?, price) WHERE id = ?', [existing[0].quantity + item.quantity, item.price || null, existing[0].id]);
       } else {
         await connection.query(
-          'INSERT INTO cart (user_id, product_id, quantity, size, color, price) VALUES (?, ?, ?, ?, ?, ?)',
-          [userId, item.product_id, item.quantity, item.size, item.color, item.price || null]
+          'INSERT INTO cart (user_id, product_id, quantity, size, color, price, voilee) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [userId, item.product_id, item.quantity, item.size, item.color, item.price || null, item.voilee ? 1 : 0]
         );
       }
     }

@@ -189,6 +189,7 @@ export async function getAllProducts(req, res) {
       price: parseFloat(p.price),
       enfant_price: p.enfant_price ? parseFloat(p.enfant_price) : null,
       is_matchy_matchy: p.is_matchy_matchy ? p.is_matchy_matchy === 1 : false,
+      voilee: p.voilee ? p.voilee === 1 : false,
       enfant_sizes: enfantSizes,
       enfant_colors: enfantColors,
       images,
@@ -283,6 +284,7 @@ export async function getProductById(req, res) {
       price: parseFloat(product.price),
       enfant_price: product.enfant_price ? parseFloat(product.enfant_price) : null,
       is_matchy_matchy: product.is_matchy_matchy ? product.is_matchy_matchy === 1 : false,
+      voilee: product.voilee ? product.voilee === 1 : false,
       enfant_sizes: enfantSizes,
       enfant_colors: enfantColors,
       images,
@@ -297,7 +299,7 @@ export async function getProductById(req, res) {
 
 export async function createProduct(req, res) {
   try {
-    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes, voilee } = req.body;
     const isMatchyProduct = category === 'matchy_matchy';
 
     let parsedVariantStock = {};
@@ -385,7 +387,7 @@ export async function createProduct(req, res) {
     }
 
     const [result] = await pool.query(
-      'INSERT INTO products (name, description, price, enfant_price, category, stock, images, sizes, colors, enfant_colors, is_matchy_matchy, enfant_sizes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO products (name, description, price, enfant_price, category, stock, images, sizes, colors, enfant_colors, is_matchy_matchy, enfant_sizes, voilee) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         name,
         description,
@@ -399,6 +401,7 @@ export async function createProduct(req, res) {
         JSON.stringify(isMatchyProduct ? parsedEnfantColors : []),
         isMatchyProduct ? 1 : 0,
         JSON.stringify(isMatchyProduct ? parsedEnfantSizes : []),
+        isMatchyProduct ? (voilee ? 1 : 0) : 0,
       ]
     );
 
@@ -427,7 +430,7 @@ export async function createProduct(req, res) {
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes } = req.body;
+    const { name, description, price, enfantPrice, category, sizes, colors, enfantColors, variantStock, enfantSizes, voilee } = req.body;
     const isMatchyProduct = category === 'matchy_matchy';
 
     const [products] = await pool.query('SELECT * FROM products WHERE id = ?', [id]);
@@ -555,7 +558,7 @@ export async function updateProduct(req, res) {
     }
 
     await pool.query(
-      'UPDATE products SET name = ?, description = ?, price = ?, enfant_price = ?, category = ?, stock = ?, images = ?, sizes = ?, colors = ?, enfant_colors = ?, is_matchy_matchy = ?, enfant_sizes = ? WHERE id = ?',
+      'UPDATE products SET name = ?, description = ?, price = ?, enfant_price = ?, category = ?, stock = ?, images = ?, sizes = ?, colors = ?, enfant_colors = ?, is_matchy_matchy = ?, enfant_sizes = ?, voilee = ? WHERE id = ?',
       [
         name,
         description,
@@ -569,6 +572,7 @@ export async function updateProduct(req, res) {
         JSON.stringify(isMatchyProduct ? parsedEnfantColors : []),
         isMatchyProduct ? 1 : 0,
         JSON.stringify(isMatchyProduct ? parsedEnfantSizes : []),
+        isMatchyProduct ? (voilee ? 1 : 0) : 0,
         id,
       ]
     );
