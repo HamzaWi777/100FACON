@@ -171,7 +171,7 @@ function MatchyMatchyForm({
           <ColorSwatches
             colors={product.colors}
             value={selection.color}
-            onChange={(color) => { updateSelection(setAdultSelections, index, 'color', color); if (index === 0) selectColorAndImage(color, product.colors, setAdultColor); }}
+            onChange={(color) => { updateSelection(setAdultSelections, index, 'color', color); selectColorAndImage(color, product.colors, setAdultColor); }}
             getStock={(color) => {
               if (!selection.size) return 0;
               if (selection.voilee && selection.size.startsWith('adult_')) {
@@ -251,7 +251,7 @@ function MatchyMatchyForm({
           <ColorSwatches
             colors={product.enfant_colors || product.colors}
             value={selection.color}
-            onChange={(color) => { updateSelection(setEnfantSelections, index, 'color', color); if (index === 0) selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor); }}
+            onChange={(color) => { updateSelection(setEnfantSelections, index, 'color', color); selectColorAndImage(color, product.enfant_colors || product.colors, setEnfantColor); }}
             getStock={(color) => selection.size ? variants[`${selection.size}_${color}`] || 0 : 0}
             name={`Couleur enfant ${index + 1}`}
           />
@@ -923,7 +923,7 @@ export function ProductDetailPage() {
                   value={row.color}
                   onChange={(color) => {
                     updateSelectionRow(rowIndex, 'color', color);
-                    if (rowIndex === 0) selectColorAndImage(color, product.colors, setSelectedColor);
+                    selectColorAndImage(color, product.colors, setSelectedColor);
                   }}
                   getStock={(color) => row.size ? product.variants?.[`${row.size}_${color}`] || 0 : 0}
                   name={`Couleur article ${rowIndex + 1}`}
