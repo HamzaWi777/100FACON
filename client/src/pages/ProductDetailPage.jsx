@@ -99,8 +99,13 @@ function MatchyMatchyForm({
   };
   const hasEnoughStock = (selections) => {
     if (!selections.length || selections.some(({ size, color }) => !size || !color)) return false;
-    const requested = selections.reduce((counts, { size, color }) => {
-      const key = `${size}_${color}`;
+    const requested = selections.reduce((counts, { size, color, voilee }) => {
+      let key;
+      if (voilee && size.startsWith('adult_')) {
+        key = `voilee_${size.replace('adult_', '')}_${color}`;
+      } else {
+        key = `${size}_${color}`;
+      }
       counts[key] = (counts[key] || 0) + 1;
       return counts;
     }, {});
@@ -167,7 +172,13 @@ function MatchyMatchyForm({
             colors={product.colors}
             value={selection.color}
             onChange={(color) => { updateSelection(setAdultSelections, index, 'color', color); if (index === 0) selectColorAndImage(color, product.colors, setAdultColor); }}
-            getStock={(color) => selection.size ? variants[`${selection.size}_${color}`] || 0 : 0}
+            getStock={(color) => {
+              if (!selection.size) return 0;
+              if (selection.voilee && selection.size.startsWith('adult_')) {
+                return variants[`voilee_${selection.size.replace('adult_', '')}_${color}`] || 0;
+              }
+              return variants[`${selection.size}_${color}`] || 0;
+            }}
             name={`Couleur adulte ${index + 1}`}
           />
           {product.voilee && (
@@ -370,14 +381,18 @@ export function ProductDetailPage() {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'adulte');
           return;
         }
-        itemsToAdd.push(...adultSelections.map(({ size, color, voilee }) => ({ size, color, quantity: 1, label: 'adulte', voilee: voilee ? true : false })));
+        itemsToAdd.push(...adultSelections.map(({ size, color, voilee }) => {
+          const actualSize = voilee && size.startsWith('adult_') ? `voilee_${size.replace('adult_', '')}` : size;
+          const price = (voilee && product.voilee_price) ? product.voilee_price : product.price;
+          return { size: actualSize, color, quantity: 1, label: 'adulte', voilee: voilee || false, price };
+        }));
       }
       if (mode === 'enfant' || mode === 'both') {
         if (!hasEnoughStock(enfantSelections)) {
           toast.error('Veuillez sélectionner une taille et couleur pour l\'enfant');
           return;
         }
-        itemsToAdd.push(...enfantSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'enfant', voilee: false })));
+        itemsToAdd.push(...enfantSelections.map(({ size, color }) => ({ size, color, quantity: 1, label: 'enfant', voilee: false, price: product.enfant_price || product.price })));
       }
       if (itemsToAdd.length === 0) {
         toast.error('Veuillez sélectionner au moins une taille/couleur disponible');
@@ -389,7 +404,7 @@ export function ProductDetailPage() {
           quantity: item.quantity,
           size: item.size,
           color: item.color,
-          price: item.label === 'adulte' ? product.price : (product.enfant_price || product.price),
+          price: item.price,
           voilee: item.voilee || false,
         }));
         if (isAuthenticated) {
@@ -570,7 +585,11 @@ export function ProductDetailPage() {
       const selections = [];
       if (selectionMode === 'adult' || selectionMode === 'both') {
         if (!hasEnoughStock(adultSelections)) return null;
-        selections.push(...adultSelections.map(({ size, color, voilee }) => ({ product_id: product.id, quantity: 1, size, color, price: product.price, voilee: voilee || false })));
+        selections.push(...adultSelections.map(({ size, color, voilee }) => {
+          const actualSize = voilee && size.startsWith('adult_') ? `voilee_${size.replace('adult_', '')}` : size;
+          const price = (voilee && product.voilee_price) ? product.voilee_price : product.price;
+          return { product_id: product.id, quantity: 1, size: actualSize, color, price, voilee: voilee || false };
+        }));
       }
       if (selectionMode === 'enfant' || selectionMode === 'both') {
         if (!hasEnoughStock(enfantSelections)) return null;

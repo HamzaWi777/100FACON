@@ -18,7 +18,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false, voileePrice: '' });
   const [variantStock, setVariantStock] = useState({});
   const [images, setImages] = useState([]);
 
@@ -78,10 +78,12 @@ export function AdminProducts() {
     const isMatchy = formData.category === 'matchy_matchy';
     const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
     const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
+    const voileeSizes = isMatchy && formData.voilee ? prefixedSizes('voilee_', DEFAULT_SIZES) : [];
     const activeVariantKeys = isMatchy
       ? [
         ...adultSizes.flatMap(size => colors.map(color => `${size}_${color}`)),
         ...enfantSizes.flatMap(size => enfantColors.map(color => `${size}_${color}`)),
+        ...(formData.voilee ? voileeSizes.flatMap(size => colors.map(color => `${size}_${color}`)) : []),
       ]
       : activeSizes.flatMap(size => colors.map(color => `${size}_${color}`));
     const submittedVariantStock = Object.fromEntries(
@@ -102,6 +104,9 @@ export function AdminProducts() {
     fd.append('enfantColors', JSON.stringify(isMatchy ? enfantColors : []));
     fd.append('variantStock', JSON.stringify(submittedVariantStock));
     fd.append('voilee', isMatchy ? (formData.voilee ? '1' : '0') : '0');
+    fd.append('voileePrice', isMatchy && formData.voilee ? formData.voileePrice : '');
+    fd.append('voileeSizes', JSON.stringify(isMatchy && formData.voilee ? voileeSizes : []));
+    fd.append('voileeColors', JSON.stringify(isMatchy && formData.voilee ? colors : []));
     images.forEach((image) => fd.append('images', image.file));
     try {
       if (editingId) {
@@ -131,6 +136,7 @@ export function AdminProducts() {
       enfantColors: product.enfant_colors || [],
       isMatchyMatchy: isMatchy,
       voilee: product.voilee || false,
+      voileePrice: product.voilee_price || '',
     });
     setVariantStock(product.variants || {});
     setImages([]);
@@ -151,7 +157,7 @@ export function AdminProducts() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false });
+    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false, voileePrice: '' });
     setVariantStock({});
     setImages([]);
     setEditingId(null);
@@ -265,6 +271,63 @@ export function AdminProducts() {
                     }`} />
                   </button>
                   <span className="text-sm text-gray-700">{formData.voilee ? 'Activée — les clients pourront choisir une version voilée pour les adultes' : 'Désactivée — pas d’option voilée'}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Matchy Matchy: Voilée configuration */}
+            {isMM && formData.voilee && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Configuration voilée</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Prix voilée (TND)</label>
+                    <input type="number" name="voileePrice" value={formData.voileePrice} onChange={handleInputChange} step="0.01"
+                      className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs voilée</label>
+                    <ColorPalette selectedColors={formData.colors} onToggle={(color) => toggleColor('colors', color)} name="Couleurs voilée" />
+                    <p className="text-xs text-gray-500 mt-1">Utilise les mêmes couleurs que l'adulte</p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-900 mb-3">Stock voilée par taille et couleur</label>
+                  <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
+                    <table className="w-full min-w-max">
+                      <thead>
+                        <tr className="bg-purple-100 border-b-2 border-purple-200">
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille (Voilée)</th>
+                          {displayColors.map(color => (
+                            <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adultActiveSizes.map(size => {
+                          const voileeSize = size.replace(ADULT_SIZE_PREFIX, 'voilee_');
+                          return (
+                            <tr key={voileeSize} className="border-b border-purple-100 hover:bg-purple-50">
+                              <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size.replace(ADULT_SIZE_PREFIX, '')}</td>
+                              {displayColors.map(color => {
+                                const key = `${voileeSize}_${color}`;
+                                return (
+                                  <td key={key} className="px-4 py-2">
+                                    <input type="number" min="0"
+                                      value={variantStock[key] || ''}
+                                      onChange={(e) => handleVariantStockChange(voileeSize, color, e.target.value)}
+                                      placeholder="0"
+                                      className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
