@@ -245,7 +245,7 @@ export function AdminProducts() {
             {isMM && (
               <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <label className="block text-sm font-medium text-gray-900 mb-3">Tailles adulte</label>
-                <p className="text-sm text-gray-600 mb-4">Tailles disponibles : {adultActiveSizes.map(s => s.replace(ADULT_SIZE_PREFIX, '')).join(', ')}</p>
+                
 
                 <label className="block text-sm font-medium text-gray-900 mb-3">Stock adulte par taille et couleur</label>
                 <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
@@ -314,7 +314,7 @@ export function AdminProducts() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-900 mb-3">Tailles voilée</label>
-                      <p className="text-sm text-gray-600 mb-4">Tailles disponibles : {adultActiveSizes.map(s => s.replace(ADULT_SIZE_PREFIX, '')).join(', ')}</p>
+                      
                     </div>
 
                     <label className="block text-sm font-medium text-gray-900 mb-3">Stock voilée par taille et couleur</label>
@@ -374,7 +374,7 @@ export function AdminProducts() {
 
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-900 mb-3">Tailles enfant</label>
-                  <p className="text-sm text-gray-600 mb-4">Tailles disponibles : {enfantActiveSizes.map(s => s.replace(ENFANT_SIZE_PREFIX, '')).join(', ')}</p>
+                  
                 </div>
 
                 <div>
