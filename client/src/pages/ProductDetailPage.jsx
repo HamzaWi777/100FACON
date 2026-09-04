@@ -171,21 +171,32 @@ function MatchyMatchyForm({
             name={`Couleur adulte ${index + 1}`}
           />
           {product.voilee && (
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => updateSelection(setAdultSelections, index, 'voilee', !selection.voilee)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                  selection.voilee ? 'bg-purple-600' : 'bg-gray-200'
-                }`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                  selection.voilee ? 'translate-x-6' : 'translate-x-1'
-                }`} />
-              </button>
-              <span className="text-sm font-medium text-gray-700">
-                {selection.voilee ? 'Voilée 🧕' : 'Normal'}
-              </span>
+            <div className="mt-3">
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Style</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateSelection(setAdultSelections, index, 'voilee', false)}
+                  className={`flex-1 rounded-lg border-2 py-2 text-sm font-semibold transition ${
+                    !selection.voilee
+                      ? 'border-purple-600 bg-purple-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300'
+                  }`}
+                >
+                  👩 Non voilée
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateSelection(setAdultSelections, index, 'voilee', true)}
+                  className={`flex-1 rounded-lg border-2 py-2 text-sm font-semibold transition ${
+                    selection.voilee
+                      ? 'border-purple-600 bg-purple-600 text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300'
+                  }`}
+                >
+                  🧕 Voilée
+                </button>
+              </div>
             </div>
           )}
         </div>
