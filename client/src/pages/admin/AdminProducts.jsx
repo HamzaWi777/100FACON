@@ -18,7 +18,7 @@ export function AdminProducts() {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false, voileePrice: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false, voileePrice: '', voileeColors: [], voileeSizes: [] });
   const [variantStock, setVariantStock] = useState({});
   const [images, setImages] = useState([]);
 
@@ -78,12 +78,12 @@ export function AdminProducts() {
     const isMatchy = formData.category === 'matchy_matchy';
     const adultSizes = prefixedSizes(ADULT_SIZE_PREFIX, DEFAULT_SIZES);
     const enfantSizes = prefixedSizes(ENFANT_SIZE_PREFIX, ENFANTS_SIZES);
-    const voileeSizes = isMatchy && formData.voilee ? prefixedSizes('voilee_', DEFAULT_SIZES) : [];
+    const voileeSizes = isMatchy && formData.voilee ? (formData.voileeSizes || prefixedSizes('voilee_', DEFAULT_SIZES)) : [];
     const activeVariantKeys = isMatchy
       ? [
         ...adultSizes.flatMap(size => colors.map(color => `${size}_${color}`)),
         ...enfantSizes.flatMap(size => enfantColors.map(color => `${size}_${color}`)),
-        ...(formData.voilee ? voileeSizes.flatMap(size => colors.map(color => `${size}_${color}`)) : []),
+        ...(formData.voilee ? voileeSizes.flatMap(size => (formData.voileeColors && formData.voileeColors.length > 0 ? formData.voileeColors : colors).map(color => `${size}_${color}`)) : []),
       ]
       : activeSizes.flatMap(size => colors.map(color => `${size}_${color}`));
     const submittedVariantStock = Object.fromEntries(
@@ -106,7 +106,7 @@ export function AdminProducts() {
     fd.append('voilee', isMatchy ? (formData.voilee ? '1' : '0') : '0');
     fd.append('voileePrice', isMatchy && formData.voilee ? formData.voileePrice : '');
     fd.append('voileeSizes', JSON.stringify(isMatchy && formData.voilee ? voileeSizes : []));
-    fd.append('voileeColors', JSON.stringify(isMatchy && formData.voilee ? colors : []));
+    fd.append('voileeColors', JSON.stringify(isMatchy && formData.voilee ? (formData.voileeColors && formData.voileeColors.length > 0 ? formData.voileeColors : colors) : []));
     images.forEach((image) => fd.append('images', image.file));
     try {
       if (editingId) {
@@ -137,6 +137,8 @@ export function AdminProducts() {
       isMatchyMatchy: isMatchy,
       voilee: product.voilee || false,
       voileePrice: product.voilee_price || '',
+      voileeColors: product.voilee_colors || [],
+      voileeSizes: product.voilee_sizes || [],
     });
     setVariantStock(product.variants || {});
     setImages([]);
@@ -157,7 +159,7 @@ export function AdminProducts() {
   };
 
   const resetForm = () => {
-    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false, voileePrice: '' });
+    setFormData({ name: '', description: '', price: '', enfantPrice: '', category: 'men', colors: [], enfantColors: [], isMatchyMatchy: false, voilee: false, voileePrice: '', voileeColors: [], voileeSizes: [] });
     setVariantStock({});
     setImages([]);
     setEditingId(null);
@@ -239,26 +241,69 @@ export function AdminProducts() {
               </div>
             </div>
 
-            {/* Matchy Matchy: Enfant Price + Colors */}
+            {/* Matchy Matchy: Adult sizes + stock */}
             {isMM && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 bg-pink-50 rounded-lg border border-pink-200">
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Prix enfant (TND)</label>
-                  <input type="number" name="enfantPrice" value={formData.enfantPrice} onChange={handleInputChange} step="0.01" required
-                    className="w-full px-4 py-2 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500" />
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <label className="block text-sm font-medium text-gray-900 mb-3">Tailles adulte</label>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {adultActiveSizes.map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => {
+                        const newSizes = formData.sizes?.includes(size)
+                          ? formData.sizes.filter(s => s !== size)
+                          : [...(formData.sizes || adultActiveSizes), size];
+                        setFormData({ ...formData, sizes: newSizes });
+                      }}
+                      className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
+                        formData.sizes?.includes(size) || (!formData.sizes && adultActiveSizes.includes(size))
+                          ? 'border-purple-600 bg-purple-700 text-white'
+                          : 'border-purple-200 text-gray-900 hover:border-purple-400'
+                      }`}
+                    >
+                      {size.replace(ADULT_SIZE_PREFIX, '')}
+                    </button>
+                  ))}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs enfant</label>
-                  <ColorPalette selectedColors={formData.enfantColors} onToggle={(color) => toggleColor('enfantColors', color)} name="Couleurs enfant" />
+
+                <label className="block text-sm font-medium text-gray-900 mb-3">Stock adulte par taille et couleur</label>
+                <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
+                  <table className="w-full min-w-max">
+                    <thead>
+                      <tr className="bg-purple-100 border-b-2 border-purple-200">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille (Adulte)</th>
+                        {displayColors.map(color => (
+                          <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adultActiveSizes.map(size => (
+                        <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
+                          <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size.replace(ADULT_SIZE_PREFIX, '')}</td>
+                          {displayColors.map(color => (
+                            <td key={`${size}-${color}`} className="px-4 py-2">
+                              <input type="number" min="0"
+                                value={variantStock[`${size}_${color}`] || ''}
+                                onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
+                                placeholder="0"
+                                className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
-            {/* Matchy Matchy: Voilée toggle */}
+            {/* Matchy Matchy: Voilée toggle + section */}
             {isMM && (
               <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <label className="block text-sm font-medium text-gray-900 mb-2">Option voilée pour les adultes</label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm font-medium text-gray-900">Option voilée pour les adultes</label>
                   <button
                     type="button"
                     onClick={() => setFormData((current) => ({ ...current, voilee: !current.voilee }))}
@@ -270,154 +315,148 @@ export function AdminProducts() {
                       formData.voilee ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
-                  <span className="text-sm text-gray-700">{formData.voilee ? 'Activée — les clients pourront choisir une version voilée pour les adultes' : 'Désactivée — pas d’option voilée'}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Matchy Matchy: Voilée configuration */}
-            {isMM && formData.voilee && (
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Configuration voilée</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Prix voilée (TND)</label>
-                    <input type="number" name="voileePrice" value={formData.voileePrice} onChange={handleInputChange} step="0.01"
-                      className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs voilée</label>
-                    <ColorPalette selectedColors={formData.colors} onToggle={(color) => toggleColor('colors', color)} name="Couleurs voilée" />
-                    <p className="text-xs text-gray-500 mt-1">Utilise les mêmes couleurs que l'adulte</p>
-                  </div>
                 </div>
 
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-900 mb-3">Stock voilée par taille et couleur</label>
-                  <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
-                    <table className="w-full min-w-max">
-                      <thead>
-                        <tr className="bg-purple-100 border-b-2 border-purple-200">
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille (Voilée)</th>
-                          {displayColors.map(color => (
-                            <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
+                {formData.voilee && (
+                  <div className="mt-4 p-4 bg-white rounded-lg border border-purple-200">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Configuration voilée</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Prix voilée (TND)</label>
+                        <input type="number" name="voileePrice" value={formData.voileePrice} onChange={handleInputChange} step="0.01"
+                          className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs voilée</label>
+                        <ColorPalette selectedColors={formData.voileeColors} onToggle={(color) => toggleColor('voileeColors', color)} name="Couleurs voilée" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-3">Tailles voilée</label>
+                      <div className="flex flex-wrap gap-2 mb-4">
                         {adultActiveSizes.map(size => {
                           const voileeSize = size.replace(ADULT_SIZE_PREFIX, 'voilee_');
                           return (
-                            <tr key={voileeSize} className="border-b border-purple-100 hover:bg-purple-50">
-                              <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size.replace(ADULT_SIZE_PREFIX, '')}</td>
-                              {displayColors.map(color => {
-                                const key = `${voileeSize}_${color}`;
-                                return (
-                                  <td key={key} className="px-4 py-2">
-                                    <input type="number" min="0"
-                                      value={variantStock[key] || ''}
-                                      onChange={(e) => handleVariantStockChange(voileeSize, color, e.target.value)}
-                                      placeholder="0"
-                                      className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
-                                  </td>
-                                );
-                              })}
-                            </tr>
+                            <button
+                              key={voileeSize}
+                              type="button"
+                              onClick={() => {
+                                const newVoileeSizes = formData.voileeSizes?.includes(voileeSize)
+                                  ? formData.voileeSizes.filter(s => s !== voileeSize)
+                                  : [...(formData.voileeSizes || adultActiveSizes.map(s => s.replace(ADULT_SIZE_PREFIX, 'voilee_'))), voileeSize];
+                                setFormData({ ...formData, voileeSizes: newVoileeSizes });
+                              }}
+                              className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
+                                formData.voileeSizes?.includes(voileeSize) || (!formData.voileeSizes && adultActiveSizes.some(s => s.replace(ADULT_SIZE_PREFIX, 'voilee_') === voileeSize))
+                                  ? 'border-purple-600 bg-purple-700 text-white'
+                                  : 'border-purple-200 text-gray-900 hover:border-purple-400'
+                              }`}
+                            >
+                              {size.replace(ADULT_SIZE_PREFIX, '')}
+                            </button>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
+                      </div>
+                    </div>
 
-            {/* Variant stock — horizontal scroll on mobile */}
-            <div>
-              {isMM ? (
-                <>
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-900 mb-3">Stock adulte par taille et couleur</label>
-                    <div className="overflow-x-auto border-2 border-purple-200 rounded-lg mb-4">
+                    <label className="block text-sm font-medium text-gray-900 mb-3">Stock voilée par taille et couleur</label>
+                    <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
                       <table className="w-full min-w-max">
                         <thead>
                           <tr className="bg-purple-100 border-b-2 border-purple-200">
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille (Adulte)</th>
-                            {displayColors.map(color => (
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille (Voilée)</th>
+                            {(formData.voileeColors && formData.voileeColors.length > 0 ? formData.voileeColors : displayColors).map(color => (
                               <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {adultActiveSizes.map(size => (
-                            <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
-                              <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size.replace(ADULT_SIZE_PREFIX, '')}</td>
-                              {displayColors.map(color => (
-                                <td key={`${size}-${color}`} className="px-4 py-2">
-                                  <input type="number" min="0"
-                                    value={variantStock[`${size}_${color}`] || ''}
-                                    onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
-                                    placeholder="0"
-                                    className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
+                          {adultActiveSizes.map(size => {
+                            const voileeSize = size.replace(ADULT_SIZE_PREFIX, 'voilee_');
+                            return (
+                              <tr key={voileeSize} className="border-b border-purple-100 hover:bg-purple-50">
+                                <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size.replace(ADULT_SIZE_PREFIX, '')}</td>
+                                {(formData.voileeColors && formData.voileeColors.length > 0 ? formData.voileeColors : displayColors).map(color => {
+                                  const key = `${voileeSize}_${color}`;
+                                  return (
+                                    <td key={key} className="px-4 py-2">
+                                      <input type="number" min="0"
+                                        value={variantStock[key] || ''}
+                                        onChange={(e) => handleVariantStockChange(voileeSize, color, e.target.value)}
+                                        placeholder="0"
+                                        className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
 
+            {/* Matchy Matchy: Enfant Price + Colors */}
+            {isMM && (
+              <div className="mt-4 p-4 bg-pink-50 rounded-lg border border-pink-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-3">Stock enfant par taille et couleur</label>
-                    <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
-                      <table className="w-full min-w-max">
-                        <thead>
-                          <tr className="bg-pink-100 border-b-2 border-purple-200">
-                            <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-pink-100">Taille (Enfant)</th>
-                             {displayEnfantColors.map(color => (
-                               <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {enfantActiveSizes.map(size => (
-                            <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
-                               <td className="px-4 py-2 font-medium text-sm bg-pink-50 sticky left-0">{size.replace(ENFANT_SIZE_PREFIX, '')}</td>
-                               {displayEnfantColors.map(color => (
-                                 <td key={`${size}-${color}`} className="px-4 py-2">
-                                  <input type="number" min="0"
-                                    value={variantStock[`${size}_${color}`] || ''}
-                                    onChange={(e) => handleVariantStockChange(size, color, e.target.value)}
-                                    placeholder="0"
-                                    className="w-16 px-2 py-1 border border-purple-300 rounded text-center text-sm focus:ring-2 focus:ring-purple-500" />
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Prix enfant (TND)</label>
+                    <input type="number" name="enfantPrice" value={formData.enfantPrice} onChange={handleInputChange} step="0.01" required
+                      className="w-full px-4 py-2 border border-pink-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500" />
                   </div>
-                </>
-              ) : (
-                <>
-                  <label className="block text-sm font-medium text-gray-900 mb-3">Stock par taille et couleur</label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Couleurs enfant</label>
+                    <ColorPalette selectedColors={formData.enfantColors} onToggle={(color) => toggleColor('enfantColors', color)} name="Couleurs enfant" />
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-900 mb-3">Tailles enfant</label>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {enfantActiveSizes.map(size => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => {
+                          const newSizes = formData.enfantSizes?.includes(size)
+                            ? formData.enfantSizes.filter(s => s !== size)
+                            : [...(formData.enfantSizes || enfantActiveSizes), size];
+                          setFormData({ ...formData, enfantSizes: newSizes });
+                        }}
+                        className={`px-4 py-2 border-2 rounded-lg transition font-medium ${
+                          formData.enfantSizes?.includes(size) || (!formData.enfantSizes && enfantActiveSizes.includes(size))
+                            ? 'border-pink-600 bg-pink-700 text-white'
+                            : 'border-pink-200 text-gray-900 hover:border-pink-400'
+                        }`}
+                      >
+                        {size.replace(ENFANT_SIZE_PREFIX, '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-3">Stock enfant par taille et couleur</label>
                   <div className="overflow-x-auto border-2 border-purple-200 rounded-lg">
                     <table className="w-full min-w-max">
                       <thead>
-                        <tr className="bg-purple-100 border-b-2 border-purple-200">
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-purple-100">Taille</th>
-                          {displayColors.map(color => (
+                        <tr className="bg-pink-100 border-b-2 border-purple-200">
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-purple-900 sticky left-0 bg-pink-100">Taille (Enfant)</th>
+                          {displayEnfantColors.map(color => (
                             <th key={color} className="px-4 py-3 text-left text-sm font-semibold text-purple-900 whitespace-nowrap">{color}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {activeSizes.map(size => (
+                        {enfantActiveSizes.map(size => (
                           <tr key={size} className="border-b border-purple-100 hover:bg-purple-50">
-                            <td className="px-4 py-2 font-medium text-sm bg-purple-50 sticky left-0">{size}</td>
-                            {displayColors.map(color => (
+                            <td className="px-4 py-2 font-medium text-sm bg-pink-50 sticky left-0">{size.replace(ENFANT_SIZE_PREFIX, '')}</td>
+                            {displayEnfantColors.map(color => (
                               <td key={`${size}-${color}`} className="px-4 py-2">
                                 <input type="number" min="0"
                                   value={variantStock[`${size}_${color}`] || ''}
@@ -431,9 +470,9 @@ export function AdminProducts() {
                       </tbody>
                     </table>
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
 
             {/* Images */}
             <div>
