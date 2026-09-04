@@ -81,7 +81,8 @@ export function AdminOrders() {
                 <p className="text-gray-600">Qté: {item.quantity} × TND {parseFloat(item.price).toFixed(2)}</p>
                 {(item.size || item.color) && (
                   <p className="text-gray-500 text-xs mt-1">
-                    {item.size && `Taille: ${item.size}`} {item.color && `Couleur: ${item.color}`}
+                    {item.size && `Taille: ${item.size.replace(/^adult_|^enfant_/, '')}`} {item.color && `| Couleur: ${item.color}`}
+                    {item.voilee && <span className="ml-1 text-purple-700 font-medium">🧕 Voilée</span>}
                   </p>
                 )}
               </div>
