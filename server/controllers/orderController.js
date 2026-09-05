@@ -264,7 +264,43 @@ export async function updateOrderStatus(req, res) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    const previousStatus = orders[0].status;
+
     await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, id]);
+
+    // If order is being cancelled, restore variant stock
+    if (status === 'cancelled' && previousStatus !== 'cancelled') {
+      const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [id]);
+      for (const item of items) {
+        if (item.size && item.color) {
+          await pool.query(
+            'UPDATE product_variants SET stock = stock + ? WHERE product_id = ? AND size = ? AND color = ? AND voilee = ?',
+            [item.quantity, item.product_id, item.size, item.color, item.voilee || 0]
+          );
+        }
+        await pool.query(
+          'UPDATE products SET stock = (SELECT COALESCE(SUM(stock), 0) FROM product_variants WHERE product_id = ?) WHERE id = ?',
+          [item.product_id, item.product_id]
+        );
+      }
+    }
+
+    // If order is being restored from cancelled, re-reduce variant stock
+    if (previousStatus === 'cancelled' && status !== 'cancelled') {
+      const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [id]);
+      for (const item of items) {
+        if (item.size && item.color) {
+          await pool.query(
+            'UPDATE product_variants SET stock = GREATEST(0, stock - ?) WHERE product_id = ? AND size = ? AND color = ? AND voilee = ?',
+            [item.quantity, item.product_id, item.size, item.color, item.voilee || 0]
+          );
+        }
+        await pool.query(
+          'UPDATE products SET stock = (SELECT COALESCE(SUM(stock), 0) FROM product_variants WHERE product_id = ?) WHERE id = ?',
+          [item.product_id, item.product_id]
+        );
+      }
+    }
 
     res.json({ message: 'Order status updated' });
   } catch (error) {
