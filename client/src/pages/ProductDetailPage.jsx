@@ -188,9 +188,9 @@ function MatchyMatchyForm({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => updateSelection(setAdultSelections, index, 'voilee', false)}
+                  onClick={() => setAdultSelections(selections => selections.map(s => ({ ...s, voilee: false })))}
                   className={`flex-1 rounded-lg border-2 py-2 text-sm font-semibold transition ${
-                    !selection.voilee
+                    !adultSelections[0]?.voilee
                       ? 'border-purple-600 bg-purple-600 text-white'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300'
                   }`}
@@ -199,9 +199,9 @@ function MatchyMatchyForm({
                 </button>
                 <button
                   type="button"
-                  onClick={() => updateSelection(setAdultSelections, index, 'voilee', true)}
+                  onClick={() => setAdultSelections(selections => selections.map(s => ({ ...s, voilee: true })))}
                   className={`flex-1 rounded-lg border-2 py-2 text-sm font-semibold transition ${
-                    selection.voilee
+                    adultSelections[0]?.voilee
                       ? 'border-purple-600 bg-purple-600 text-white'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-purple-300'
                   }`}
