@@ -299,9 +299,16 @@ function CheckoutPageContent() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base"
+              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 transition disabled:opacity-50 font-bold text-base flex items-center justify-center gap-2"
             >
-              {submitting ? 'Traitement en cours...' : 'Confirmer la commande'}
+              {submitting ? (
+                <>
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                  Traitement en cours...
+                </>
+              ) : (
+                'Confirmer la commande'
+              )}
             </button>
 
             <button

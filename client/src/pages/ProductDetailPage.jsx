@@ -319,6 +319,7 @@ export function ProductDetailPage() {
   const [enfantSelections, setEnfantSelections] = useState([{ size: '', color: '' }]);
   const [selectionMode, setSelectionMode] = useState('both');
   const [immediateOrderSubmitting, setImmediateOrderSubmitting] = useState(false);
+  const [immediateOrderSuccess, setImmediateOrderSuccess] = useState(false);
   const [immediateOrderForm, setImmediateOrderForm] = useState({
     full_name: '', phone: '', shipping_address: '', wilaya: '',
   });
@@ -643,6 +644,7 @@ export function ProductDetailPage() {
         numItems: immediateOrderItems.reduce((sum, item) => sum + item.quantity, 0),
       });
       toast.success('Commande confirmée avec succès');
+      setImmediateOrderSuccess(true);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Impossible de confirmer la commande');
     } finally {
@@ -657,6 +659,14 @@ export function ProductDetailPage() {
           <h2 className="font-serif text-xl font-bold text-gray-900">Commander maintenant</h2>
           <span className="text-xs font-semibold uppercase tracking-wide text-purple-600">Livraison à domicile</span>
         </div>
+
+        {immediateOrderSuccess ? (
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center">
+            <div className="mb-2 text-3xl">✅</div>
+            <h3 className="mb-1 text-lg font-bold text-green-800">Commande confirmée avec succès !</h3>
+            <p className="text-sm text-green-700">Nous vous contacterons bientôt pour confirmer votre commande.</p>
+          </div>
+        ) : (
         <form onSubmit={handleImmediateOrderSubmit} className="space-y-3">
           {!isAuthenticated && (
             <div>
@@ -687,10 +697,18 @@ export function ProductDetailPage() {
             <div className="flex justify-between"><span>Livraison:</span><span className="font-semibold text-green-600">TND 8.00</span></div>
             <div className="flex justify-between border-t border-purple-100 pt-2 text-lg font-bold text-purple-600"><span>Total:</span><span>TND {(immediateSubtotal + 8).toFixed(2)}</span></div>
           </div>
-          <button type="submit" disabled={immediateOrderSubmitting || !immediateOrderItems} className="w-full rounded-lg bg-purple-700 py-3 font-bold text-white shadow-sm transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-50">
-            {immediateOrderSubmitting ? 'Traitement en cours...' : 'Commander maintenant'}
+          <button type="submit" disabled={immediateOrderSubmitting || !immediateOrderItems} className="w-full rounded-lg bg-purple-700 py-3 font-bold text-white shadow-sm transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2">
+            {immediateOrderSubmitting ? (
+              <>
+                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
+                Traitement en cours...
+              </>
+            ) : (
+              'Commander maintenant'
+            )}
           </button>
         </form>
+        )}
       </div>
     </div>
   );
