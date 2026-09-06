@@ -463,8 +463,13 @@ export function ProductDetailPage() {
   const currentVariantStock = product ? getVariantStock() : 0;
   const hasEnoughStock = (selections) => {
     if (!selections.length || selections.some(({ size, color }) => !size || !color)) return false;
-    const requested = selections.reduce((counts, { size, color }) => {
-      const key = `${size}_${color}`;
+    const requested = selections.reduce((counts, { size, color, voilee }) => {
+      let key;
+      if (voilee && size && size.startsWith('adult_')) {
+        key = `voilee_${size.replace('adult_', '')}_${color}`;
+      } else {
+        key = `${size}_${color}`;
+      }
       counts[key] = (counts[key] || 0) + 1;
       return counts;
     }, {});
