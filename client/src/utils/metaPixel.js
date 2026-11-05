@@ -62,10 +62,11 @@ export function trackInitiateCheckout({ value, currency = 'TND', contentIds = []
 
 export function trackPurchase({ orderId, value, currency = 'TND', contentIds = [], numItems = 0 }) {
   fbq('track', 'Purchase', {
-    event_id: `purchase-${orderId}`,
     value,
     currency,
     content_ids: contentIds.map(String),
     num_items: numItems,
+  }, {
+    eventID: `purchase-${orderId}`,
   });
 }
