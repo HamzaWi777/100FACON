@@ -1,9 +1,6 @@
 const META_CAPI_URL = (pixelId) =>
-  `https://graph.facebook.com/v18.0/${pixelId}/events`;
+  `https://graph.facebook.com/v26.0/${pixelId}/events`;
 
-// Meta CAPI may reject some ISO codes in custom_data even though they are valid ISO 4217.
-// We send currency at both the event top level and inside custom_data to maximize acceptance.
-// The calling code already swallows errors so a Meta rejection never breaks the order flow.
 export async function sendCapiPurchaseEvent({
   orderId,
   totalPrice,
@@ -32,8 +29,6 @@ export async function sendCapiPurchaseEvent({
       client_ip_address: userIp || '',
       client_user_agent: userAgent || '',
     },
-    // Some Meta API versions/regions require currency at the event top level
-    currency,
     custom_data: {
       value,
       currency,

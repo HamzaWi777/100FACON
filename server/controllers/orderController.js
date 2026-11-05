@@ -115,7 +115,7 @@ for (const item of cartItems) {
         items: cartItems,
         userIp: req.ip || req.connection?.remoteAddress,
         userAgent: req.get('user-agent'),
-        eventSourceUrl: process.env.SITE_URL || req.get('referer') || '',
+        eventSourceUrl: req.get('referer') || process.env.SITE_URL || '',
         pixelId,
         accessToken,
       }).catch(() => {});
